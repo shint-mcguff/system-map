@@ -156,7 +156,7 @@ header h1{font-size:16px;letter-spacing:.04em}
 <button id="mode-flow" class="mbtn">⇢ フローで見る</button>
 <input id="q" placeholder="⌕ 検索 ( / )" autocomplete="off">
 <div id="results"></div>
-<span class="hint">drag:移動 · wheel:ズーム · click:詳細 · dbl-click:リセット</span>
+<span class="hint">drag:移動 · 右drag/⌘drag:回転 · wheel:ズーム · click:詳細 · dbl-click:リセット</span>
 </header>
 <div id="stage"></div>
 <div id="panel"></div>
@@ -272,8 +272,9 @@ function rebuildEdges(){
 }
 rebuildEdges();
 
-// ---- カメラ操作（パン専用: ドラッグで地図移動。回転なし）----
+// ---- カメラ操作（ドラッグ=パン / 右・⌘+Ctrl+ドラッグ=回転）----
 let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(${CITY_CX},0,${CITY_CZ});
+window.__cam=function(){return {yaw,pitch,zoom,target:{x:target.x,z:target.z}}}; // QA用
 function updateCamera(){
   const d=140; // 正射影なので距離は固定、zoomで拡縮
   camera.position.set(
@@ -288,7 +289,7 @@ updateCamera();
 const cv=renderer.domElement;
 let drag=null,moved=false;
 cv.addEventListener('pointerdown',function(e){
-  drag={x:e.clientX,y:e.clientY};moved=false;
+  drag={x:e.clientX,y:e.clientY,rotate:(e.button===2||e.ctrlKey||e.metaKey)};moved=false;
   try{cv.setPointerCapture(e.pointerId);}catch(_){}
   cv.classList.add('grabbing');
 });
@@ -297,16 +298,22 @@ cv.addEventListener('pointermove',function(e){
   var dx=e.clientX-drag.x,dy=e.clientY-drag.y;
   if(!moved&&Math.abs(dx)<4&&Math.abs(dy)<4)return;
   moved=true;
-  // パンのみ: 画面の動きにそのまま追従
   var scale=(FRUSTUM/zoom)/innerHeight;
-  // 画面右(世界) = normalize(cross(forward, up)) = (cos(yaw), 0, -sin(yaw))
-  // 画面上(地面射影) = forward の水平成分 = (-cos(yaw), 0, -sin(yaw))
-  var rx=-Math.cos(yaw), rz=Math.sin(yaw);
-  var fx=-Math.cos(yaw), fz=-Math.sin(yaw);
-  target.x+=rx*dx*scale; target.z+=rz*dx*scale;
-  target.x+=fx*dy*scale/Math.max(0.3,Math.cos(pitch));
-  target.z+=fz*dy*scale/Math.max(0.3,Math.cos(pitch));
-  drag={x:e.clientX,y:e.clientY};
+  if(drag.rotate){
+    // 回転: 街をぐるっと見る。パン・ズームとは別ジェスチャなので干渉しない
+    yaw+=dx*0.006;
+    pitch=Math.max(0.12,Math.min(1.45,pitch+dy*0.005));
+  } else {
+    // パン: 画面の動きにそのまま追従
+    // 画面右(世界) = normalize(cross(forward, up)) = (cos(yaw), 0, -sin(yaw))
+    // 画面上(地面射影) = forward の水平成分 = (-cos(yaw), 0, -sin(yaw))
+    var rx=-Math.cos(yaw), rz=Math.sin(yaw);
+    var fx=-Math.cos(yaw), fz=-Math.sin(yaw);
+    target.x+=rx*dx*scale; target.z+=rz*dx*scale;
+    target.x+=fx*dy*scale/Math.max(0.3,Math.cos(pitch));
+    target.z+=fz*dy*scale/Math.max(0.3,Math.cos(pitch));
+  }
+  drag={x:e.clientX,y:e.clientY,rotate:drag.rotate};
   updateCamera();
 });
 function endDrag(){drag=null;cv.classList.remove('grabbing');setTimeout(function(){moved=false;},0);}
