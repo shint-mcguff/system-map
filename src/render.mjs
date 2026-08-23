@@ -85,24 +85,25 @@ export function render(city, opts = {}) {
     labels += `<text x="${lc.x}" y="${lc.y}" class="dist-label">${esc(p.name)}</text>`;
   }
 
-  // --- ビル: 奥(col+rowが小さい)から手前へ描く（ペインター法） ---
-  const blocks = [];
-  for (const n of nodes) {
-    const { col, row } = pos.get(n.id);
-    const h = heightOf(n);
-    const p = cubePolys(col, row, h);
-    const color = KIND_COLORS[n.kind] ?? KIND_COLORS.module;
-    // ラベルはビルの<g>内に同梱 → パン/ズームに自動追従、取り残されない
-    blocks.push({
-      depth: col + row,
-      svg: `<g class="b" data-id="${esc(n.id)}">` +
-        `<polygon points="${p.left}" fill="${shade(color, -28)}" stroke="#14120b" stroke-width="0.5"/>` +
-        `<polygon points="${p.right}" fill="${shade(color, -14)}" stroke="#14120b" stroke-width="0.5"/>` +
-        `<polygon points="${p.top}" fill="${color}" stroke="#14120b" stroke-width="0.5"><title>${esc(n.id)} · loc:${n.loc} in:${n.fanIn}</title></polygon>` +
-        `<text class="flabel" x="${p.apex.x}" y="${p.apex.y - 4}">${esc(path.basename(n.id))}</text>` +
-        `</g>`,
-    });
-  }
+    // ビル: 奥(col+rowが小さい)から手前へ描く（ペインター法）
+    // 高さはJSで再計算できるよう data-h(現在高さ) を持たせ、タイムライン再生で伸縮する
+    const blocks = [];
+    for (const n of nodes) {
+      const { col, row } = pos.get(n.id);
+      const h = heightOf(n);
+      const p = cubePolys(col, row, h);
+      const color = KIND_COLORS[n.kind] ?? KIND_COLORS.module;
+      // ラベルはビルの<g>内に同梱 → パン/ズームに自動追従、取り残されない
+      blocks.push({
+        depth: col + row,
+        svg: `<g class="b" data-id="${esc(n.id)}" data-col="${col}" data-row="${row}" data-h="${h}">` +
+          `<polygon class="fL" points="${p.left}" fill="${shade(color, -28)}" stroke="#14120b" stroke-width="0.5"/>` +
+          `<polygon class="fR" points="${p.right}" fill="${shade(color, -14)}" stroke="#14120b" stroke-width="0.5"/>` +
+          `<polygon class="fT" points="${p.top}" fill="${color}" stroke="#14120b" stroke-width="0.5"><title>${esc(n.id)} · loc:${n.loc} in:${n.fanIn}</title></polygon>` +
+          `<text class="flabel" x="${p.apex.x}" y="${p.apex.y - 4}">${esc(path.basename(n.id))}</text>` +
+          `</g>`,
+      });
+    }
   blocks.sort((a, b) => a.depth - b.depth);
   const blocksSvg = blocks.map(b => b.svg).join('');
 
@@ -149,6 +150,7 @@ svg.grabbing{cursor:grabbing}
 .b.sel polygon{stroke:var(--accent);stroke-width:2}
 .flabel{font-size:9px;fill:#3d3826;text-anchor:middle;pointer-events:none;font-weight:600;display:none}
 svg.zoomed-in .flabel{display:block}
+.born-label{display:block !important;fill:#d96c47;font-size:10px;font-weight:800;text-anchor:middle;pointer-events:none}
 #panel{position:absolute;top:12px;right:12px;width:320px;max-height:calc(100% - 24px);overflow:auto;background:var(--card);border:2px solid var(--ink);padding:14px;display:none}
 #panel h2{font-size:13px;word-break:break-all}
 #panel .row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed #d8cfb4}
@@ -202,11 +204,16 @@ svg.zoomed-in .flabel{display:block}
 .b.dim polygon{opacity:.18}
 .b.not-born{opacity:0;pointer-events:none;transition:opacity .3s}
 .b.born{transition:opacity .3s}
-#timebar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:var(--card);border:2px solid var(--ink);padding:8px 14px;z-index:4;box-shadow:4px 4px 0 rgba(20,18,11,.12);max-width:calc(100% - 40px)}
-#tb-play{width:34px;height:30px;border:1.5px solid var(--ink);background:var(--accent);color:#fff;cursor:pointer;font-size:13px}
-#tb-now{height:30px;border:1.5px solid var(--ink);background:var(--card);cursor:pointer;font:11px inherit;padding:0 10px;color:var(--ink)}
-#tb-range{width:min(420px,42vw);accent-color:var(--accent)}
-#tb-label{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
+#timebar{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;display:flex;gap:8px;align-items:center;background:var(--card);border:2px solid var(--ink);padding:8px 12px;z-index:4;box-shadow:4px 4px 0 rgba(20,18,11,.12);width:min(92vw,760px);box-sizing:border-box}
+#tb-play{flex:none;width:34px;height:30px;border:1.5px solid var(--ink);background:var(--accent);color:#fff;cursor:pointer;font-size:13px}
+#tb-now{flex:none;height:30px;border:1.5px solid var(--ink);background:var(--card);cursor:pointer;font:11px inherit;padding:0 10px;color:var(--ink)}
+#tb-range{flex:1;min-width:60px;accent-color:var(--accent)}
+#tb-label{flex:1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+@media(max-width:640px){
+  #timebar{flex-wrap:wrap;bottom:8px;padding:6px 10px;gap:6px}
+  #tb-label{order:-1;width:100%;flex:none}
+  #tb-play,#tb-now{height:28px}
+}
 @media(max-width:720px){#panel{width:calc(100% - 24px)}}
 </style></head><body>
 <header>
@@ -556,6 +563,7 @@ ${opts.timeline ? `<div id="timebar"><button id="tb-play">▶︎</button><input 
           if(!g)return;
           g.classList.remove('not-born');g.classList.add('born');
           g.style.opacity='';
+          setBuildingHeight(g, +g.dataset.h, true);
         });
         range.value=TIMELINE.frames.length-1;
         return;
@@ -566,23 +574,44 @@ ${opts.timeline ? `<div id="timebar"><button id="tb-play">▶︎</button><input 
         var g=document.querySelector('.b[data-id="'+CSS.escape(n.id)+'"]');
         if(!g)return;
         var loc=f.files[n.id];
+        g.querySelectorAll('.flabel').forEach(function(t){t.remove()});
         if(loc!==undefined){
-          // 当時存在: 現在の高さに対するLOC比率で縮める
-          var ratio=Math.min(1,loc/Math.max(n.loc,1));
-          g.style.opacity='1';g.style.display='';
-          g.querySelectorAll('polygon').forEach(function(p){
-            if(!p.dataset.h)p.dataset.h=p.getAttribute('points');
-            p.style.transition='none';
-          });
-          g.setAttribute('data-scale',ratio.toFixed(2));
-          g.style.transformOrigin='center';
-          g.style.setProperty('--grow',ratio.toFixed(2));
+          // 当時存在: LOC比率で高さを伸縮（成長が見える）
+          var ratio=Math.max(loc,1)/Math.max(n.loc,1);
           g.classList.add('born');g.classList.remove('not-born');
+          g.style.opacity='';
+          setBuildingHeight(g, Math.max(4,+g.dataset.h*ratio), false);
+          // 新築（前フレームに無かった）はラベルを出して目立たせる
+          var prev=i>0?TIMELINE.frames[i-1].files[n.id]:undefined;
+          if(prev===undefined&&i>0||i===0){
+            var t=document.createElementNS('http://www.w3.org/2000/svg','text');
+            t.setAttribute('class','flabel born-label');
+            t.textContent='NEW';
+            t.setAttribute('x',(+g.dataset.col-+g.dataset.row)*44);
+            t.setAttribute('y',(isoY(+g.dataset.col,+g.dataset.row)-(+g.dataset.h*ratio))-10);
+            g.appendChild(t);
+          }
         } else {
           g.classList.add('not-born');g.classList.remove('born');
         }
       });
       range.value=i;
+    }
+    // ビルの高さを3面ポリゴンで再計算する
+    function isoY(c,r){return (c+r)*22;}
+    function setBuildingHeight(g,hgt,animate){
+      var c=+g.dataset.col,r=+g.dataset.row;
+      var w=44,d=22;
+      var x=(c-r)*w, y=(c+r)*d-hgt;
+      var N={x:x,y:y-d},E={x:x+w,y:(c+r)*d},S={x:x,y:(c+r)*d+d},W={x:x-w,y:(c+r)*d};
+      function pts(a){return a.map(function(q){return q[0]+','+q[1]}).join(' ');}
+      var tr=animate?'transition .45s':'';
+      var top=[[N.x,N.y],[E.x,E.y],[S.x,S.y],[W.x,W.y]];
+      var left=[[W.x,W.y],[S.x,S.y],[S.x,S.y+hgt],[W.x,W.y+hgt]];
+      var right=[[S.x,S.y],[E.x,E.y],[E.x,E.y+hgt],[S.x,S.y+hgt]];
+      g.querySelector('.fL').setAttribute('points',pts(left));
+      g.querySelector('.fR').setAttribute('points',pts(right));
+      g.querySelector('.fT').setAttribute('points',pts(top));
     }
     window.__applyTimeframe=applyFrame;
     applyFrame(-1); // 初期は現在
