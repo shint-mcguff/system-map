@@ -148,21 +148,21 @@ for(const id in meshes){ /* 必要時のみ生成 */ }
 const edgeGroup=new THREE.Group();cityGroup.add(edgeGroup);
 function rebuildEdges(){
   while(edgeGroup.children.length){const c=edgeGroup.children[0];edgeGroup.remove(c);c.geometry.dispose();}
-  // 太い線: TubeGeometry（LineBasicMaterialのlinewidthは効かないため）
+  // 太い線: TubeGeometry。3d-force-graph準拠の薄さ（linkOpacity既定0.2）に合わせて
+  // 細く薄く。主線だけわずかに濃い
   const maxFan=Math.max(...NODES.map(n=>n.fanIn),1);
   for(const e of EDGES){
     var fanInTo=0;
     for(const n of NODES){if(n.x===e.b.x&&n.z===e.b.z){fanInTo=n.fanIn;break;}}
     const importance=Math.pow(fanInTo/maxFan,0.6);       // 0..1
-    const radius=0.03+importance*0.1;                    // 細め。主線だけ少し太い
+    const radius=0.02+importance*0.05;                   // ヘアライン寄り
     const curve=new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(e.a.x,e.a.h,e.a.z),
       new THREE.Vector3((e.a.x+e.b.x)/2,Math.max(e.a.h,e.b.h)+16,(e.a.z+e.b.z)/2),
       new THREE.Vector3(e.b.x,e.b.h,e.b.z));
     const g=new THREE.TubeGeometry(curve,20,radius,5,false);
-    // 主線（importance高い）は濃グレー、それ以外は薄グレー
-    var col=importance>0.45?0x55503f:0x9a927a;
-    var op=0.5+importance*0.35;
+    var col=importance>0.45?0x6f6754:0xb3ab92;
+    var op=0.2+importance*0.28;                          // 既定0.2、主線でも~0.48
     const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col,transparent:true,opacity:op}));
     edgeGroup.add(m);
   }
@@ -217,20 +217,38 @@ function endDrag(){drag=null;cv.classList.remove('grabbing');setTimeout(function
 cv.addEventListener('pointerup',endDrag);
 cv.addEventListener('pointercancel',endDrag);
 cv.addEventListener('contextmenu',function(e){e.preventDefault();});
-// トラックパッド対応:
-// - 2本指スクロール (deltaX/deltaY) = パン
-// - ピンチ (ctrlKey+wheel) = ズーム
-// - マウスホイール = ズーム
+// トラックパッド対応（Google Maps / Figma方式）:
+// - 2本指スクロール = パン
+// - ピンチ (ctrlKey+wheel) = カーソル位置アンカーでズーム
+// - マウスホイール = 同じくカーソルアンカーでズーム
+// - deltaMode=1（行単位・Firefox）はpxに正規化
+var rc=new THREE.Raycaster();
+function groundAt(ndc){ // 画面点→地面(y=0)交点。ズームアンカー計算に使う
+  rc.setFromCamera(ndc,camera);
+  var t=-rc.ray.origin.y/rc.ray.direction.y;
+  if(!isFinite(t)||t<=0)return null;
+  return rc.ray.origin.clone().addScaledVector(rc.ray.direction,t);
+}
+function zoomAt(ndc,nz){ // ndcの地面点を動かさずにズームする
+  var b=groundAt(ndc);
+  zoom=nz;updateCamera();
+  var a=groundAt(ndc);
+  if(b&&a){target.x+=b.x-a.x;target.z+=b.z-a.z;updateCamera();}
+}
+window.__groundAt=function(sx,sy){ // QA用: 画面px→地面ワールド座標
+  var g=groundAt({x:(sx/innerWidth)*2-1,y:-(sy/innerHeight)*2+1});
+  return g?{x:+g.x.toFixed(2),z:+g.z.toFixed(2)}:null;
+};
 cv.addEventListener('wheel',function(e){
   e.preventDefault();
+  var dy=e.deltaY*(e.deltaMode===1?16:1);
+  var ndc={x:(e.clientX/innerWidth)*2-1,y:-(e.clientY/innerHeight)*2+1};
   if(e.ctrlKey){
-    // ピンチジェスチャ（MacはctrlKeyが立つ）: 開く=拡大
-    zoom=Math.max(0.35,Math.min(8,zoom*Math.exp(e.deltaY*0.008)));
-    updateCamera();
+    // ピンチ: 開く(deltaY負)=拡大。指を広げたら世界が広がる直感に合わせる
+    zoomAt(ndc,Math.max(0.35,Math.min(8,zoom*Math.exp(-dy*0.008))));
   } else {
     // マウスホイール: 下回し=縮小（標準の向き）
-    zoom=Math.max(0.35,Math.min(8,zoom*Math.exp(e.deltaY*0.0012)));
-    updateCamera();
+    zoomAt(ndc,Math.max(0.35,Math.min(8,zoom*Math.exp(dy*0.0012))));
   }
 },{passive:false});
 cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;zoom=1;target.set(8.0,0,14.0);updateCamera();});
