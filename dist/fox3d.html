@@ -208,10 +208,21 @@ function endDrag(){drag=null;cv.classList.remove('grabbing');setTimeout(function
 cv.addEventListener('pointerup',endDrag);
 cv.addEventListener('pointercancel',endDrag);
 cv.addEventListener('contextmenu',function(e){e.preventDefault();});
+// トラックパッド対応:
+// - 2本指スクロール (deltaX/deltaY) = パン
+// - ピンチ (ctrlKey+wheel) = ズーム
+// - マウスホイール = ズーム
 cv.addEventListener('wheel',function(e){
   e.preventDefault();
-  zoom=Math.max(0.35,Math.min(8,zoom*Math.exp(-e.deltaY*0.0012)));
-  updateCamera();
+  if(e.ctrlKey){
+    // ピンチジェスチャ（MacはctrlKeyが立つ）: 開く=拡大
+    zoom=Math.max(0.35,Math.min(8,zoom*Math.exp(e.deltaY*0.008)));
+    updateCamera();
+  } else {
+    // マウスホイール: 下回し=縮小（標準の向き）
+    zoom=Math.max(0.35,Math.min(8,zoom*Math.exp(e.deltaY*0.0012)));
+    updateCamera();
+  }
 },{passive:false});
 cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;zoom=1;target.set(30,0,30);updateCamera();});
 
