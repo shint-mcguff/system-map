@@ -53,7 +53,7 @@ header h1{font-size:16px;letter-spacing:.04em}
 <button id="mode-flow" class="mbtn">⇢ フローで見る</button>
 <input id="q" placeholder="⌕ 検索 ( / )" autocomplete="off">
 <div id="results"></div>
-<span class="hint">drag:移動 · wheel:ズーム · 右drag:回転 · click:詳細 · dbl-click:リセット</span>
+<span class="hint">drag:移動 · wheel:ズーム · click:詳細 · dbl-click:リセット</span>
 </header>
 <div id="stage"></div>
 <div id="panel"></div>
@@ -169,7 +169,7 @@ function rebuildEdges(){
 }
 rebuildEdges();
 
-// ---- カメラ操作（Google Maps式: ドラッグ=パン、右/Ctrl+ドラッグ=回転）----
+// ---- カメラ操作（パン専用: ドラッグで地図移動。回転なし）----
 let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(30,0,30);
 function updateCamera(){
   const d=140; // 正射影なので距離は固定、zoomで拡縮
@@ -185,7 +185,7 @@ updateCamera();
 const cv=renderer.domElement;
 let drag=null,moved=false;
 cv.addEventListener('pointerdown',function(e){
-  drag={x:e.clientX,y:e.clientY,rotate:(e.button===2||e.ctrlKey||e.metaKey)};moved=false;
+  drag={x:e.clientX,y:e.clientY};moved=false;
   try{cv.setPointerCapture(e.pointerId);}catch(_){}
   cv.classList.add('grabbing');
 });
@@ -194,19 +194,14 @@ cv.addEventListener('pointermove',function(e){
   var dx=e.clientX-drag.x,dy=e.clientY-drag.y;
   if(!moved&&Math.abs(dx)<4&&Math.abs(dy)<4)return;
   moved=true;
-  if(drag.rotate){
-    // 回転: 右ドラッグ/Ctrl+ドラッグのみ
-    yaw+=dx*0.006;pitch=Math.max(0.12,Math.min(1.45,pitch+dy*0.005));
-  } else {
-    // パン: 画面の動きにそのまま追従
-    var scale=(FRUSTUM/zoom)/innerHeight;
-    var rx=-Math.sin(yaw), rz=-Math.cos(yaw);
-    var fx=-Math.cos(yaw), fz=Math.sin(yaw);
-    target.x+=rx*dx*scale; target.z+=rz*dx*scale;
-    target.x+=fx*dy*scale/Math.max(0.3,Math.cos(pitch));
-    target.z+=fz*dy*scale/Math.max(0.3,Math.cos(pitch));
-  }
-  drag={x:e.clientX,y:e.clientY,rotate:drag.rotate};
+  // パンのみ: 画面の動きにそのまま追従
+  var scale=(FRUSTUM/zoom)/innerHeight;
+  var rx=-Math.sin(yaw), rz=-Math.cos(yaw);
+  var fx=-Math.cos(yaw), fz=Math.sin(yaw);
+  target.x+=rx*dx*scale; target.z+=rz*dx*scale;
+  target.x+=fx*dy*scale/Math.max(0.3,Math.cos(pitch));
+  target.z+=fz*dy*scale/Math.max(0.3,Math.cos(pitch));
+  drag={x:e.clientX,y:e.clientY};
   updateCamera();
 });
 function endDrag(){drag=null;cv.classList.remove('grabbing');setTimeout(function(){moved=false;},0);}
