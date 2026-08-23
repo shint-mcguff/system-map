@@ -16,8 +16,8 @@ export function render(city, opts = {}) {
   const t0 = performance.now();
   const nodes = city.nodes;
 
-  // --- レイアウト（区画は大きい順に棚詰め、GAP=道幅。建物は区画の中心に置く） ---
-  const TILE = 4; // グリッド1マス=4世界単位
+  // --- レイアウト（密集街区: 建物はタイル整数座標にスナップ。道幅1タイル） ---
+  const TILE = 4; // グリッド1マス=4世界単位。全座標はTILE整数倍でグリッド線に吸着させる
   const districts = new Map();
   for (const n of nodes) {
     if (!districts.has(n.district)) districts.set(n.district, []);
@@ -25,23 +25,27 @@ export function render(city, opts = {}) {
   }
   const names = [...districts.keys()].sort((a, b) =>
     (districts.get(b).length - districts.get(a).length) || (a < b ? -1 : 1));
-  const perRow = Math.max(1, Math.ceil(Math.sqrt(names.length)));
   const pos = new Map();
-  const plates = [];
+  const plates = []; // { name, ox, oy, cols, rows } すべてタイル単位
   const GAP = 1;
-  let ox = 0, oy = 0, rowMax = 0;
-  names.forEach((name, i) => {
-    const size = Math.max(1, Math.ceil(Math.sqrt(districts.get(name).length)));
-    if (i > 0 && i % perRow === 0) { ox = 0; oy += rowMax + GAP; rowMax = 0; }
+  const shapeOf = count => {
+    const cols = Math.max(1, Math.ceil(Math.sqrt(count)));
+    return { cols, rows: Math.ceil(count / cols) };
+  };
+  const widest = Math.max(...names.map(n => shapeOf(districts.get(n).length).cols));
+  const shelfCols = Math.max(Math.ceil(Math.sqrt(nodes.length)), widest);
+  let ox = 0, oy = 0, rowRows = 0;
+  names.forEach(name => {
     const files = districts.get(name).sort((a, b) => (b.fanIn - a.fanIn) || (b.loc - a.loc));
+    const { cols, rows } = shapeOf(files.length);
+    if (ox > 0 && ox + cols > shelfCols) { ox = 0; oy += rowRows + GAP; rowRows = 0; }
     files.forEach((n, j) => {
-      // ブロック中心基準で配置する（1建物区画でもプレートの真ん中に立つ）
-      const c = ox + (j % size), r = oy + Math.floor(j / size);
-      pos.set(n.id, { x: (c - (size - 1) / 2) * TILE, z: (r - (size - 1) / 2) * TILE });
+      const c = ox + (j % cols), r = oy + Math.floor(j / cols);
+      pos.set(n.id, { x: c * TILE, z: r * TILE }); // 整数タイル → グリッド境界に吸着
     });
-    plates.push({ name, cx: (ox + (size - 1) / 2) * TILE, cz: (oy + (size - 1) / 2) * TILE, w: (size + 0.7) * TILE });
-    ox += size + GAP;
-    rowMax = Math.max(rowMax, size);
+    plates.push({ name, ox, oy, cols, rows });
+    ox += cols + GAP;
+    rowRows = Math.max(rowRows, rows);
   });
 
   const maxLoc = Math.max(...nodes.map(n => n.loc), 1);
@@ -58,12 +62,19 @@ export function render(city, opts = {}) {
       color: KIND_COLORS[n.kind] ?? KIND_COLORS.module,
     };
   });
-  const plateData = plates.map(p => ({ name: p.name, x: p.cx, z: p.cz, w: p.w }));
+  const PM = 0.3; // プレートの薄い縁
+  const plateData = plates.map(p => ({
+    name: p.name,
+    x: (p.ox + (p.cols - 1) / 2) * TILE,
+    z: (p.oy + (p.rows - 1) / 2) * TILE,
+    w: p.cols * TILE + 2 * PM,
+    d: p.rows * TILE + 2 * PM,
+  }));
   // 街のバウンディボックス中心（カメラ初期位置・リセット先）
   let bb0=Infinity,bb1=-Infinity,bb2=Infinity,bb3=-Infinity;
-  for(const p of plates){
-    bb0=Math.min(bb0,p.cx-p.w/2);bb1=Math.max(bb1,p.cx+p.w/2);
-    bb2=Math.min(bb2,p.cz-p.w/2);bb3=Math.max(bb3,p.cz+p.w/2);
+  for(const p of plateData){
+    bb0=Math.min(bb0,p.x-p.w/2);bb1=Math.max(bb1,p.x+p.w/2);
+    bb2=Math.min(bb2,p.z-p.d/2);bb3=Math.max(bb3,p.z+p.d/2);
   }
   const CITY_CX=((bb0+bb1)/2).toFixed(1), CITY_CZ=((bb2+bb3)/2).toFixed(1);
 
@@ -192,26 +203,26 @@ sun.position.set(60,140,40);scene.add(sun);
 const fill=new THREE.DirectionalLight(0xe8f0ff,0.5);
 fill.position.set(-60,90,-70);scene.add(fill);
 
-// 地面プレート（区画）— {x,z}=ブロック中心, w=一辺
+// 地面プレート（区画）— {x,z}=ブロック中心, w×d=実寸+薄い縁
 const TILE=${TILE};
 const groundMat=new THREE.MeshLambertMaterial({color:0xe6ddc4});
 for(const p of ${JSON.stringify(plateData)}){
-  const geo=new THREE.BoxGeometry(p.w,0.4,p.w);
+  const geo=new THREE.BoxGeometry(p.w,0.4,p.d);
   const m=new THREE.Mesh(geo,groundMat);
   m.position.set(p.x,-0.2,p.z);
   cityGroup.add(m);
 }
 
-// ベースグリッド（街全域を覆う基準線）
+// ベースグリッド（線を建物のタイル境界に正確に合わせる）
 (function buildGrid(){
   var minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
   for(const n of NODES){minX=Math.min(minX,n.x);maxX=Math.max(maxX,n.x);minZ=Math.min(minZ,n.z);maxZ=Math.max(maxZ,n.z);}
-  var pad=TILE*6;
-  minX-=pad;maxX+=pad;minZ-=pad;maxZ+=pad;
-  var sizeX=maxX-minX,sizeZ=maxZ-minZ,cx=(minX+maxX)/2,cz=(minZ+maxZ)/2;
-  var div=Math.round(sizeX/TILE);
-  var grid=new THREE.GridHelper(Math.max(sizeX,sizeZ),div,0xc9bd9c,0xd8cfb4);
-  grid.position.set(cx,-0.02,cz);
+  var pad=TILE*4;
+  // 建物中心=TILE整数倍 → 境界は±TILE/2。線の始点を境界に置けば全線が境界に乗る
+  var x0=minX-TILE/2-pad, z0=minZ-TILE/2-pad;
+  var S=Math.max(maxX+TILE/2+pad-x0, maxZ+TILE/2+pad-z0);
+  var grid=new THREE.GridHelper(S,Math.round(S/TILE),0xc9bd9c,0xd8cfb4);
+  grid.position.set(x0+S/2,-0.02,z0+S/2);
   cityGroup.add(grid);
 })();
 
@@ -342,6 +353,8 @@ function selectNode(id){
     showPanel(n);
   }
 }
+// ヘッダーはflex-wrapで段数が変わる → 固定topでなく実高さから配置する
+function belowHeader(){return (document.querySelector('header').offsetHeight+10)+'px';}
 function showPanel(n){
   var note=(NOTES[n.id]||{})['_file']||'';
   var symRows=(n.syms||[]).slice(0,40).map(function(s){
@@ -353,6 +366,7 @@ function showPanel(n){
     '<div class="row"><span>fanned in by</span><b>'+n.fanIn+'</b></div>'+
     ((n.syms||[]).length?'<div class="sec">exports ('+n.syms.length+')</div>'+symRows:'')+
     '<div class="deps">imports: '+(n.deps.map(function(d){return d.split('/').pop()}).join(' · ')||'—')+'</div>';
+  panel.style.top=belowHeader();
   panel.style.display='block';
 }
 let downPos=null;
@@ -394,6 +408,7 @@ function renderResults(list){
   results.innerHTML=list.slice(0,12).map(function(n){
     return '<div class="r" data-id="'+n.id.replace(/"/g,'&quot;')+'"><span>'+n.id.split('/').pop()+'</span><small>'+n.district+'</small></div>';
   }).join('');
+  results.style.top=belowHeader();
   results.style.display='block';
 }
 qInput.addEventListener('input',function(){

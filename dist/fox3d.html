@@ -67,8 +67,8 @@ const mainSrc = "/**\n * @license\n * Copyright 2010-2026 Three.js Authors\n * S
 const threeBlob = new Blob([mainSrc], {type:'text/javascript'});
 const THREE = await import(URL.createObjectURL(threeBlob));
 
-var NODES=[{"id":"eslint.config.mjs","kind":"module","district":"(root)","loc":26,"fanIn":0,"deps":[],"syms":[],"x":-2,"z":-2,"h":2.149210903873745,"color":11576454},{"id":"next-env.d.ts","kind":"module","district":"(root)","loc":7,"fanIn":0,"deps":[],"syms":[],"x":-2,"z":2,"h":2.0401721664275465,"color":11576454},{"id":"next.config.ts","kind":"module","district":"(root)","loc":8,"fanIn":0,"deps":[],"syms":[],"x":2,"z":-2,"h":2.0459110473457676,"color":11576454},{"id":"postcss.config.mjs","kind":"module","district":"(root)","loc":6,"fanIn":0,"deps":[],"syms":[],"x":2,"z":2,"h":2.034433285509326,"color":11576454},{"id":"src/app/api/places/search/route.ts","kind":"api","district":"app/api","loc":3,"fanIn":0,"deps":[],"syms":[{"k":"api","n":"GET","l":2}],"x":-2,"z":10,"h":2.0172166427546627,"color":14249031},{"id":"src/app/api/tags/normalize/route.ts","kind":"api","district":"app/api","loc":3,"fanIn":0,"deps":[],"syms":[{"k":"api","n":"POST","l":2}],"x":2,"z":10,"h":2.0172166427546627,"color":14249031},{"id":"src/app/dashboard/page.tsx","kind":"page","district":"app/dashboard","loc":9,"fanIn":0,"deps":[],"syms":[{"k":"fn","n":"DashboardPage","l":1}],"x":12,"z":12,"h":2.0516499282639886,"color":14725964},{"id":"src/app/layout.tsx","kind":"page","district":"app","loc":6,"fanIn":0,"deps":[],"syms":[{"k":"const","n":"metadata","l":2},{"k":"fn","n":"RootLayout","l":3}],"x":26,"z":-2,"h":2.034433285509326,"color":14725964},{"id":"src/app/page.tsx","kind":"page","district":"app","loc":303,"fanIn":0,"deps":["src/components/Map.tsx","src/components/HoverDetail.tsx","src/components/ThemeToggle.tsx","src/components/RestaurantForm.tsx","src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"KitsunenPage","l":12}],"x":22,"z":-2,"h":3.738880918220947,"color":14725964},{"id":"src/components/HoverDetail.tsx","kind":"component","district":"components","loc":229,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts"],"syms":[{"k":"fn","n":"HoverDetail","l":14}],"x":14,"z":-2,"h":8.445885183725037,"color":8368233},{"id":"src/components/Map.tsx","kind":"component","district":"components","loc":211,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"Map","l":20}],"x":10,"z":2,"h":8.34258532719706,"color":8368233},{"id":"src/components/RestaurantForm.tsx","kind":"component","district":"components","loc":697,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"RestaurantForm","l":63}],"x":10,"z":-2,"h":11.13168145345244,"color":8368233},{"id":"src/components/ThemeToggle.tsx","kind":"component","district":"components","loc":51,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts"],"syms":[{"k":"fn","n":"ThemeToggle","l":11}],"x":14,"z":2,"h":7.42436438028171,"color":8368233},{"id":"src/config/theme.ts","kind":"module","district":"config","loc":37,"fanIn":5,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"lightTheme","l":4},{"k":"const","n":"darkTheme","l":16},{"k":"fn","n":"getTheme","l":28},{"k":"const","n":"mapboxStyles","l":33}],"x":20,"z":12,"h":18.044444741336136,"color":11576454},{"id":"src/data/dummyData.ts","kind":"module","district":"data","loc":156,"fanIn":0,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"dummyRestaurants","l":4}],"x":0,"z":24,"h":2.895265423242468,"color":11576454},{"id":"src/lib/supabase.ts","kind":"lib","district":"lib","loc":190,"fanIn":3,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"supabase","l":8},{"k":"fn","n":"getRestaurants","l":11},{"k":"fn","n":"addRestaurant","l":43},{"k":"fn","n":"updateRestaurant","l":70},{"k":"fn","n":"deleteRestaurant","l":98},{"k":"fn","n":"uploadRestaurantPhoto","l":124},{"k":"fn","n":"deleteRestaurantPhoto","l":169}],"x":8,"z":24,"h":14.162858801191682,"color":10190804},{"id":"src/types/index.ts","kind":"type","district":"types","loc":40,"fanIn":8,"deps":[],"syms":[{"k":"type","n":"SmokingType","l":3},{"k":"type","n":"Restaurant","l":5},{"k":"type","n":"ThemeMode","l":27},{"k":"type","n":"ThemeColors","l":29}],"x":16,"z":24,"h":24.22955523672884,"color":9079434}];
-var EDGES=[{"a":{"x":22,"z":-2,"h":3.738880918220947},"b":{"x":16,"z":24,"h":24.22955523672884}},{"a":{"x":14,"z":-2,"h":8.445885183725037},"b":{"x":16,"z":24,"h":24.22955523672884}},{"a":{"x":10,"z":2,"h":8.34258532719706},"b":{"x":16,"z":24,"h":24.22955523672884}},{"a":{"x":10,"z":-2,"h":11.13168145345244},"b":{"x":16,"z":24,"h":24.22955523672884}},{"a":{"x":14,"z":2,"h":7.42436438028171},"b":{"x":16,"z":24,"h":24.22955523672884}},{"a":{"x":20,"z":12,"h":18.044444741336136},"b":{"x":16,"z":24,"h":24.22955523672884}},{"a":{"x":0,"z":24,"h":2.895265423242468},"b":{"x":16,"z":24,"h":24.22955523672884}},{"a":{"x":8,"z":24,"h":14.162858801191682},"b":{"x":16,"z":24,"h":24.22955523672884}},{"a":{"x":22,"z":-2,"h":3.738880918220947},"b":{"x":20,"z":12,"h":18.044444741336136}},{"a":{"x":14,"z":-2,"h":8.445885183725037},"b":{"x":20,"z":12,"h":18.044444741336136}},{"a":{"x":10,"z":2,"h":8.34258532719706},"b":{"x":20,"z":12,"h":18.044444741336136}},{"a":{"x":10,"z":-2,"h":11.13168145345244},"b":{"x":20,"z":12,"h":18.044444741336136}},{"a":{"x":14,"z":2,"h":7.42436438028171},"b":{"x":20,"z":12,"h":18.044444741336136}},{"a":{"x":22,"z":-2,"h":3.738880918220947},"b":{"x":8,"z":24,"h":14.162858801191682}},{"a":{"x":10,"z":2,"h":8.34258532719706},"b":{"x":8,"z":24,"h":14.162858801191682}},{"a":{"x":10,"z":-2,"h":11.13168145345244},"b":{"x":8,"z":24,"h":14.162858801191682}},{"a":{"x":22,"z":-2,"h":3.738880918220947},"b":{"x":10,"z":2,"h":8.34258532719706}},{"a":{"x":22,"z":-2,"h":3.738880918220947},"b":{"x":14,"z":-2,"h":8.445885183725037}},{"a":{"x":22,"z":-2,"h":3.738880918220947},"b":{"x":14,"z":2,"h":7.42436438028171}},{"a":{"x":22,"z":-2,"h":3.738880918220947},"b":{"x":10,"z":-2,"h":11.13168145345244}}];
+var NODES=[{"id":"eslint.config.mjs","kind":"module","district":"(root)","loc":26,"fanIn":0,"deps":[],"syms":[],"x":0,"z":0,"h":2.149210903873745,"color":11576454},{"id":"next-env.d.ts","kind":"module","district":"(root)","loc":7,"fanIn":0,"deps":[],"syms":[],"x":0,"z":4,"h":2.0401721664275465,"color":11576454},{"id":"next.config.ts","kind":"module","district":"(root)","loc":8,"fanIn":0,"deps":[],"syms":[],"x":4,"z":0,"h":2.0459110473457676,"color":11576454},{"id":"postcss.config.mjs","kind":"module","district":"(root)","loc":6,"fanIn":0,"deps":[],"syms":[],"x":4,"z":4,"h":2.034433285509326,"color":11576454},{"id":"src/app/api/places/search/route.ts","kind":"api","district":"app/api","loc":3,"fanIn":0,"deps":[],"syms":[{"k":"api","n":"GET","l":2}],"x":12,"z":12,"h":2.0172166427546627,"color":14249031},{"id":"src/app/api/tags/normalize/route.ts","kind":"api","district":"app/api","loc":3,"fanIn":0,"deps":[],"syms":[{"k":"api","n":"POST","l":2}],"x":16,"z":12,"h":2.0172166427546627,"color":14249031},{"id":"src/app/dashboard/page.tsx","kind":"page","district":"app/dashboard","loc":9,"fanIn":0,"deps":[],"syms":[{"k":"fn","n":"DashboardPage","l":1}],"x":0,"z":20,"h":2.0516499282639886,"color":14725964},{"id":"src/app/layout.tsx","kind":"page","district":"app","loc":6,"fanIn":0,"deps":[],"syms":[{"k":"const","n":"metadata","l":2},{"k":"fn","n":"RootLayout","l":3}],"x":4,"z":12,"h":2.034433285509326,"color":14725964},{"id":"src/app/page.tsx","kind":"page","district":"app","loc":303,"fanIn":0,"deps":["src/components/Map.tsx","src/components/HoverDetail.tsx","src/components/ThemeToggle.tsx","src/components/RestaurantForm.tsx","src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"KitsunenPage","l":12}],"x":0,"z":12,"h":3.738880918220947,"color":14725964},{"id":"src/components/HoverDetail.tsx","kind":"component","district":"components","loc":229,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts"],"syms":[{"k":"fn","n":"HoverDetail","l":14}],"x":16,"z":0,"h":8.445885183725037,"color":8368233},{"id":"src/components/Map.tsx","kind":"component","district":"components","loc":211,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"Map","l":20}],"x":12,"z":4,"h":8.34258532719706,"color":8368233},{"id":"src/components/RestaurantForm.tsx","kind":"component","district":"components","loc":697,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"RestaurantForm","l":63}],"x":12,"z":0,"h":11.13168145345244,"color":8368233},{"id":"src/components/ThemeToggle.tsx","kind":"component","district":"components","loc":51,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts"],"syms":[{"k":"fn","n":"ThemeToggle","l":11}],"x":16,"z":4,"h":7.42436438028171,"color":8368233},{"id":"src/config/theme.ts","kind":"module","district":"config","loc":37,"fanIn":5,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"lightTheme","l":4},{"k":"const","n":"darkTheme","l":16},{"k":"fn","n":"getTheme","l":28},{"k":"const","n":"mapboxStyles","l":33}],"x":8,"z":20,"h":18.044444741336136,"color":11576454},{"id":"src/data/dummyData.ts","kind":"module","district":"data","loc":156,"fanIn":0,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"dummyRestaurants","l":4}],"x":16,"z":20,"h":2.895265423242468,"color":11576454},{"id":"src/lib/supabase.ts","kind":"lib","district":"lib","loc":190,"fanIn":3,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"supabase","l":8},{"k":"fn","n":"getRestaurants","l":11},{"k":"fn","n":"addRestaurant","l":43},{"k":"fn","n":"updateRestaurant","l":70},{"k":"fn","n":"deleteRestaurant","l":98},{"k":"fn","n":"uploadRestaurantPhoto","l":124},{"k":"fn","n":"deleteRestaurantPhoto","l":169}],"x":0,"z":28,"h":14.162858801191682,"color":10190804},{"id":"src/types/index.ts","kind":"type","district":"types","loc":40,"fanIn":8,"deps":[],"syms":[{"k":"type","n":"SmokingType","l":3},{"k":"type","n":"Restaurant","l":5},{"k":"type","n":"ThemeMode","l":27},{"k":"type","n":"ThemeColors","l":29}],"x":8,"z":28,"h":24.22955523672884,"color":9079434}];
+var EDGES=[{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":16,"z":0,"h":8.445885183725037},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":12,"z":4,"h":8.34258532719706},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":12,"z":0,"h":11.13168145345244},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":16,"z":4,"h":7.42436438028171},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":8,"z":20,"h":18.044444741336136},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":16,"z":20,"h":2.895265423242468},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":0,"z":28,"h":14.162858801191682},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":16,"z":0,"h":8.445885183725037},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":12,"z":4,"h":8.34258532719706},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":12,"z":0,"h":11.13168145345244},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":16,"z":4,"h":7.42436438028171},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":0,"z":28,"h":14.162858801191682}},{"a":{"x":12,"z":4,"h":8.34258532719706},"b":{"x":0,"z":28,"h":14.162858801191682}},{"a":{"x":12,"z":0,"h":11.13168145345244},"b":{"x":0,"z":28,"h":14.162858801191682}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":12,"z":4,"h":8.34258532719706}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":16,"z":0,"h":8.445885183725037}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":16,"z":4,"h":7.42436438028171}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":12,"z":0,"h":11.13168145345244}}];
 var NOTES={};
 var TIMELINE=null;
 
@@ -100,26 +100,26 @@ sun.position.set(60,140,40);scene.add(sun);
 const fill=new THREE.DirectionalLight(0xe8f0ff,0.5);
 fill.position.set(-60,90,-70);scene.add(fill);
 
-// 地面プレート（区画）— {x,z}=ブロック中心, w=一辺
+// 地面プレート（区画）— {x,z}=ブロック中心, w×d=実寸+薄い縁
 const TILE=4;
 const groundMat=new THREE.MeshLambertMaterial({color:0xe6ddc4});
-for(const p of [{"name":"(root)","x":2,"z":2,"w":10.8},{"name":"components","x":14,"z":2,"w":10.8},{"name":"app","x":26,"z":2,"w":10.8},{"name":"app/api","x":2,"z":14,"w":10.8},{"name":"app/dashboard","x":12,"z":12,"w":6.8},{"name":"config","x":20,"z":12,"w":6.8},{"name":"data","x":0,"z":24,"w":6.8},{"name":"lib","x":8,"z":24,"w":6.8},{"name":"types","x":16,"z":24,"w":6.8}]){
-  const geo=new THREE.BoxGeometry(p.w,0.4,p.w);
+for(const p of [{"name":"(root)","x":2,"z":2,"w":8.6,"d":8.6},{"name":"components","x":14,"z":2,"w":8.6,"d":8.6},{"name":"app","x":2,"z":12,"w":8.6,"d":4.6},{"name":"app/api","x":14,"z":12,"w":8.6,"d":4.6},{"name":"app/dashboard","x":0,"z":20,"w":4.6,"d":4.6},{"name":"config","x":8,"z":20,"w":4.6,"d":4.6},{"name":"data","x":16,"z":20,"w":4.6,"d":4.6},{"name":"lib","x":0,"z":28,"w":4.6,"d":4.6},{"name":"types","x":8,"z":28,"w":4.6,"d":4.6}]){
+  const geo=new THREE.BoxGeometry(p.w,0.4,p.d);
   const m=new THREE.Mesh(geo,groundMat);
   m.position.set(p.x,-0.2,p.z);
   cityGroup.add(m);
 }
 
-// ベースグリッド（街全域を覆う基準線）
+// ベースグリッド（線を建物のタイル境界に正確に合わせる）
 (function buildGrid(){
   var minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
   for(const n of NODES){minX=Math.min(minX,n.x);maxX=Math.max(maxX,n.x);minZ=Math.min(minZ,n.z);maxZ=Math.max(maxZ,n.z);}
-  var pad=TILE*6;
-  minX-=pad;maxX+=pad;minZ-=pad;maxZ+=pad;
-  var sizeX=maxX-minX,sizeZ=maxZ-minZ,cx=(minX+maxX)/2,cz=(minZ+maxZ)/2;
-  var div=Math.round(sizeX/TILE);
-  var grid=new THREE.GridHelper(Math.max(sizeX,sizeZ),div,0xc9bd9c,0xd8cfb4);
-  grid.position.set(cx,-0.02,cz);
+  var pad=TILE*4;
+  // 建物中心=TILE整数倍 → 境界は±TILE/2。線の始点を境界に置けば全線が境界に乗る
+  var x0=minX-TILE/2-pad, z0=minZ-TILE/2-pad;
+  var S=Math.max(maxX+TILE/2+pad-x0, maxZ+TILE/2+pad-z0);
+  var grid=new THREE.GridHelper(S,Math.round(S/TILE),0xc9bd9c,0xd8cfb4);
+  grid.position.set(x0+S/2,-0.02,z0+S/2);
   cityGroup.add(grid);
 })();
 
@@ -170,7 +170,7 @@ function rebuildEdges(){
 rebuildEdges();
 
 // ---- カメラ操作（パン専用: ドラッグで地図移動。回転なし）----
-let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(14.0,0,12.0);
+let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(8.0,0,14.0);
 function updateCamera(){
   const d=140; // 正射影なので距離は固定、zoomで拡縮
   camera.position.set(
@@ -226,7 +226,7 @@ cv.addEventListener('wheel',function(e){
     updateCamera();
   }
 },{passive:false});
-cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;zoom=1;target.set(14.0,0,12.0);updateCamera();});
+cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;zoom=1;target.set(8.0,0,14.0);updateCamera();});
 
 // リサイズ
 addEventListener('resize',function(){
@@ -250,6 +250,8 @@ function selectNode(id){
     showPanel(n);
   }
 }
+// ヘッダーはflex-wrapで段数が変わる → 固定topでなく実高さから配置する
+function belowHeader(){return (document.querySelector('header').offsetHeight+10)+'px';}
 function showPanel(n){
   var note=(NOTES[n.id]||{})['_file']||'';
   var symRows=(n.syms||[]).slice(0,40).map(function(s){
@@ -261,6 +263,7 @@ function showPanel(n){
     '<div class="row"><span>fanned in by</span><b>'+n.fanIn+'</b></div>'+
     ((n.syms||[]).length?'<div class="sec">exports ('+n.syms.length+')</div>'+symRows:'')+
     '<div class="deps">imports: '+(n.deps.map(function(d){return d.split('/').pop()}).join(' · ')||'—')+'</div>';
+  panel.style.top=belowHeader();
   panel.style.display='block';
 }
 let downPos=null;
@@ -302,6 +305,7 @@ function renderResults(list){
   results.innerHTML=list.slice(0,12).map(function(n){
     return '<div class="r" data-id="'+n.id.replace(/"/g,'&quot;')+'"><span>'+n.id.split('/').pop()+'</span><small>'+n.district+'</small></div>';
   }).join('');
+  results.style.top=belowHeader();
   results.style.display='block';
 }
 qInput.addEventListener('input',function(){
