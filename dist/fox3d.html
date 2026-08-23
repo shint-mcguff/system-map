@@ -48,7 +48,7 @@ header h1{font-size:16px;letter-spacing:.04em}
 <span class="stat"><b>17</b><span>files</span></span>
 <span class="stat"><b>1,982</b><span>loc</span></span>
 <span class="stat"><b>20</b><span>imports</span></span>
-<span class="legend"><span class="lg"><i style="background:#e0b34c"></i>page</span><span class="lg"><i style="background:#7fb069"></i>component</span><span class="lg"><i style="background:#d96c47"></i>api</span><span class="lg"><i style="background:#5aa9d6"></i>hook</span><span class="lg"><i style="background:#9b7fd4"></i>lib</span><span class="lg"><i style="background:#8a8a8a"></i>type</span><span class="lg"><i style="background:#5f7d5f"></i>test</span><span class="lg"><i style="background:#b0a486"></i>module</span></span>
+<span class="legend"><span class="lg"><i style="background:#e0b34c"></i>page</span><span class="lg"><i style="background:#7fb069"></i>component</span><span class="lg"><i style="background:#d96c47"></i>api</span><span class="lg"><i style="background:#5aa9d6"></i>hook</span><span class="lg"><i style="background:#9b7fd4"></i>lib</span><span class="lg"><i style="background:#6e6858"></i>type</span><span class="lg"><i style="background:#5f7d5f"></i>test</span><span class="lg"><i style="background:#b0a486"></i>module</span></span>
 <span class="meaning">高さ＝使われている数 · 色＝種類</span>
 <button id="mode-flow" class="mbtn">⇢ フローで見る</button>
 <input id="q" placeholder="⌕ 検索 ( / )" autocomplete="off">
@@ -67,7 +67,7 @@ const mainSrc = "/**\n * @license\n * Copyright 2010-2026 Three.js Authors\n * S
 const threeBlob = new Blob([mainSrc], {type:'text/javascript'});
 const THREE = await import(URL.createObjectURL(threeBlob));
 
-var NODES=[{"id":"eslint.config.mjs","kind":"module","district":"(root)","loc":26,"fanIn":0,"deps":[],"syms":[],"x":0,"z":0,"h":2.149210903873745,"color":11576454},{"id":"next-env.d.ts","kind":"module","district":"(root)","loc":7,"fanIn":0,"deps":[],"syms":[],"x":0,"z":4,"h":2.0401721664275465,"color":11576454},{"id":"next.config.ts","kind":"module","district":"(root)","loc":8,"fanIn":0,"deps":[],"syms":[],"x":4,"z":0,"h":2.0459110473457676,"color":11576454},{"id":"postcss.config.mjs","kind":"module","district":"(root)","loc":6,"fanIn":0,"deps":[],"syms":[],"x":4,"z":4,"h":2.034433285509326,"color":11576454},{"id":"src/app/api/places/search/route.ts","kind":"api","district":"app/api","loc":3,"fanIn":0,"deps":[],"syms":[{"k":"api","n":"GET","l":2}],"x":12,"z":12,"h":2.0172166427546627,"color":14249031},{"id":"src/app/api/tags/normalize/route.ts","kind":"api","district":"app/api","loc":3,"fanIn":0,"deps":[],"syms":[{"k":"api","n":"POST","l":2}],"x":16,"z":12,"h":2.0172166427546627,"color":14249031},{"id":"src/app/dashboard/page.tsx","kind":"page","district":"app/dashboard","loc":9,"fanIn":0,"deps":[],"syms":[{"k":"fn","n":"DashboardPage","l":1}],"x":0,"z":20,"h":2.0516499282639886,"color":14725964},{"id":"src/app/layout.tsx","kind":"page","district":"app","loc":6,"fanIn":0,"deps":[],"syms":[{"k":"const","n":"metadata","l":2},{"k":"fn","n":"RootLayout","l":3}],"x":4,"z":12,"h":2.034433285509326,"color":14725964},{"id":"src/app/page.tsx","kind":"page","district":"app","loc":303,"fanIn":0,"deps":["src/components/Map.tsx","src/components/HoverDetail.tsx","src/components/ThemeToggle.tsx","src/components/RestaurantForm.tsx","src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"KitsunenPage","l":12}],"x":0,"z":12,"h":3.738880918220947,"color":14725964},{"id":"src/components/HoverDetail.tsx","kind":"component","district":"components","loc":229,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts"],"syms":[{"k":"fn","n":"HoverDetail","l":14}],"x":16,"z":0,"h":8.445885183725037,"color":8368233},{"id":"src/components/Map.tsx","kind":"component","district":"components","loc":211,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"Map","l":20}],"x":12,"z":4,"h":8.34258532719706,"color":8368233},{"id":"src/components/RestaurantForm.tsx","kind":"component","district":"components","loc":697,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"RestaurantForm","l":63}],"x":12,"z":0,"h":11.13168145345244,"color":8368233},{"id":"src/components/ThemeToggle.tsx","kind":"component","district":"components","loc":51,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts"],"syms":[{"k":"fn","n":"ThemeToggle","l":11}],"x":16,"z":4,"h":7.42436438028171,"color":8368233},{"id":"src/config/theme.ts","kind":"module","district":"config","loc":37,"fanIn":5,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"lightTheme","l":4},{"k":"const","n":"darkTheme","l":16},{"k":"fn","n":"getTheme","l":28},{"k":"const","n":"mapboxStyles","l":33}],"x":8,"z":20,"h":18.044444741336136,"color":11576454},{"id":"src/data/dummyData.ts","kind":"module","district":"data","loc":156,"fanIn":0,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"dummyRestaurants","l":4}],"x":16,"z":20,"h":2.895265423242468,"color":11576454},{"id":"src/lib/supabase.ts","kind":"lib","district":"lib","loc":190,"fanIn":3,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"supabase","l":8},{"k":"fn","n":"getRestaurants","l":11},{"k":"fn","n":"addRestaurant","l":43},{"k":"fn","n":"updateRestaurant","l":70},{"k":"fn","n":"deleteRestaurant","l":98},{"k":"fn","n":"uploadRestaurantPhoto","l":124},{"k":"fn","n":"deleteRestaurantPhoto","l":169}],"x":0,"z":28,"h":14.162858801191682,"color":10190804},{"id":"src/types/index.ts","kind":"type","district":"types","loc":40,"fanIn":8,"deps":[],"syms":[{"k":"type","n":"SmokingType","l":3},{"k":"type","n":"Restaurant","l":5},{"k":"type","n":"ThemeMode","l":27},{"k":"type","n":"ThemeColors","l":29}],"x":8,"z":28,"h":24.22955523672884,"color":9079434}];
+var NODES=[{"id":"eslint.config.mjs","kind":"module","district":"(root)","loc":26,"fanIn":0,"deps":[],"syms":[],"x":0,"z":0,"h":2.149210903873745,"color":11576454},{"id":"next-env.d.ts","kind":"module","district":"(root)","loc":7,"fanIn":0,"deps":[],"syms":[],"x":0,"z":4,"h":2.0401721664275465,"color":11576454},{"id":"next.config.ts","kind":"module","district":"(root)","loc":8,"fanIn":0,"deps":[],"syms":[],"x":4,"z":0,"h":2.0459110473457676,"color":11576454},{"id":"postcss.config.mjs","kind":"module","district":"(root)","loc":6,"fanIn":0,"deps":[],"syms":[],"x":4,"z":4,"h":2.034433285509326,"color":11576454},{"id":"src/app/api/places/search/route.ts","kind":"api","district":"app/api","loc":3,"fanIn":0,"deps":[],"syms":[{"k":"api","n":"GET","l":2}],"x":12,"z":12,"h":2.0172166427546627,"color":14249031},{"id":"src/app/api/tags/normalize/route.ts","kind":"api","district":"app/api","loc":3,"fanIn":0,"deps":[],"syms":[{"k":"api","n":"POST","l":2}],"x":16,"z":12,"h":2.0172166427546627,"color":14249031},{"id":"src/app/dashboard/page.tsx","kind":"page","district":"app/dashboard","loc":9,"fanIn":0,"deps":[],"syms":[{"k":"fn","n":"DashboardPage","l":1}],"x":0,"z":20,"h":2.0516499282639886,"color":14725964},{"id":"src/app/layout.tsx","kind":"page","district":"app","loc":6,"fanIn":0,"deps":[],"syms":[{"k":"const","n":"metadata","l":2},{"k":"fn","n":"RootLayout","l":3}],"x":4,"z":12,"h":2.034433285509326,"color":14725964},{"id":"src/app/page.tsx","kind":"page","district":"app","loc":303,"fanIn":0,"deps":["src/components/Map.tsx","src/components/HoverDetail.tsx","src/components/ThemeToggle.tsx","src/components/RestaurantForm.tsx","src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"KitsunenPage","l":12}],"x":0,"z":12,"h":3.738880918220947,"color":14725964},{"id":"src/components/HoverDetail.tsx","kind":"component","district":"components","loc":229,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts"],"syms":[{"k":"fn","n":"HoverDetail","l":14}],"x":16,"z":0,"h":8.445885183725037,"color":8368233},{"id":"src/components/Map.tsx","kind":"component","district":"components","loc":211,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"Map","l":20}],"x":12,"z":4,"h":8.34258532719706,"color":8368233},{"id":"src/components/RestaurantForm.tsx","kind":"component","district":"components","loc":697,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts","src/lib/supabase.ts"],"syms":[{"k":"fn","n":"RestaurantForm","l":63}],"x":12,"z":0,"h":11.13168145345244,"color":8368233},{"id":"src/components/ThemeToggle.tsx","kind":"component","district":"components","loc":51,"fanIn":1,"deps":["src/types/index.ts","src/config/theme.ts"],"syms":[{"k":"fn","n":"ThemeToggle","l":11}],"x":16,"z":4,"h":7.42436438028171,"color":8368233},{"id":"src/config/theme.ts","kind":"module","district":"config","loc":37,"fanIn":5,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"lightTheme","l":4},{"k":"const","n":"darkTheme","l":16},{"k":"fn","n":"getTheme","l":28},{"k":"const","n":"mapboxStyles","l":33}],"x":8,"z":20,"h":18.044444741336136,"color":11576454},{"id":"src/data/dummyData.ts","kind":"module","district":"data","loc":156,"fanIn":0,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"dummyRestaurants","l":4}],"x":16,"z":20,"h":2.895265423242468,"color":11576454},{"id":"src/lib/supabase.ts","kind":"lib","district":"lib","loc":190,"fanIn":3,"deps":["src/types/index.ts"],"syms":[{"k":"const","n":"supabase","l":8},{"k":"fn","n":"getRestaurants","l":11},{"k":"fn","n":"addRestaurant","l":43},{"k":"fn","n":"updateRestaurant","l":70},{"k":"fn","n":"deleteRestaurant","l":98},{"k":"fn","n":"uploadRestaurantPhoto","l":124},{"k":"fn","n":"deleteRestaurantPhoto","l":169}],"x":0,"z":28,"h":14.162858801191682,"color":10190804},{"id":"src/types/index.ts","kind":"type","district":"types","loc":40,"fanIn":8,"deps":[],"syms":[{"k":"type","n":"SmokingType","l":3},{"k":"type","n":"Restaurant","l":5},{"k":"type","n":"ThemeMode","l":27},{"k":"type","n":"ThemeColors","l":29}],"x":8,"z":28,"h":24.22955523672884,"color":7235672}];
 var EDGES=[{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":16,"z":0,"h":8.445885183725037},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":12,"z":4,"h":8.34258532719706},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":12,"z":0,"h":11.13168145345244},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":16,"z":4,"h":7.42436438028171},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":8,"z":20,"h":18.044444741336136},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":16,"z":20,"h":2.895265423242468},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":0,"z":28,"h":14.162858801191682},"b":{"x":8,"z":28,"h":24.22955523672884}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":16,"z":0,"h":8.445885183725037},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":12,"z":4,"h":8.34258532719706},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":12,"z":0,"h":11.13168145345244},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":16,"z":4,"h":7.42436438028171},"b":{"x":8,"z":20,"h":18.044444741336136}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":0,"z":28,"h":14.162858801191682}},{"a":{"x":12,"z":4,"h":8.34258532719706},"b":{"x":0,"z":28,"h":14.162858801191682}},{"a":{"x":12,"z":0,"h":11.13168145345244},"b":{"x":0,"z":28,"h":14.162858801191682}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":12,"z":4,"h":8.34258532719706}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":16,"z":0,"h":8.445885183725037}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":16,"z":4,"h":7.42436438028171}},{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":12,"z":0,"h":11.13168145345244}}];
 var NOTES={};
 var TIMELINE={"repo":"fox","commitCount":26,"spanDays":4,"frames":[{"ts":1760765516,"date":"2025-10-18","hash":"4da2387e","msg":"feat: reset scaffold (dashboard + api stubs)","nFiles":8,"totalLoc":157,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":103}},{"ts":1760856541,"date":"2025-10-19","hash":"00d6eadb","msg":"redeploy","nFiles":16,"totalLoc":1939,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":149,"src/components/Map.tsx":208,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760856812,"date":"2025-10-19","hash":"1993f8c3","msg":"Fix Typescript errors","nFiles":16,"totalLoc":1939,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":149,"src/components/Map.tsx":208,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760857001,"date":"2025-10-19","hash":"734f2da7","msg":"Fix HoverDetail props type error","nFiles":16,"totalLoc":1940,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":208,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760857217,"date":"2025-10-19","hash":"9614db89","msg":"Fix Map null check error","nFiles":16,"totalLoc":1942,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760857454,"date":"2025-10-19","hash":"152d2373","msg":"Fix postal code error","nFiles":16,"totalLoc":1942,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760857664,"date":"2025-10-19","hash":"43abb2e0","msg":"Fix postal code name error","nFiles":16,"totalLoc":1942,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760858212,"date":"2025-10-19","hash":"05a35e9f","msg":"Fix","nFiles":16,"totalLoc":1942,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760858624,"date":"2025-10-19","hash":"3fa90cc7","msg":"modify stylesheet","nFiles":16,"totalLoc":1945,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760859583,"date":"2025-10-19","hash":"b56b1608","msg":"enhance function search lat and lng from address","nFiles":16,"totalLoc":1946,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":876,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760859751,"date":"2025-10-19","hash":"2fd185b3","msg":"semicolone","nFiles":16,"totalLoc":1946,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":876,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760859906,"date":"2025-10-19","hash":"a9a4bbe0","msg":"semicolone2","nFiles":16,"totalLoc":1946,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":876,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760860117,"date":"2025-10-19","hash":"897d04da","msg":"semicolone3","nFiles":16,"totalLoc":1954,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":884,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760860318,"date":"2025-10-19","hash":"0cb6032f","msg":"semicolone final","nFiles":16,"totalLoc":1947,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":877,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760861212,"date":"2025-10-19","hash":"9ea40242","msg":"reduce form selection","nFiles":16,"totalLoc":1813,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":743,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760861316,"date":"2025-10-19","hash":"4d7b20bb","msg":"delete unused codes","nFiles":16,"totalLoc":1798,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":728,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760861493,"date":"2025-10-19","hash":"d3041723","msg":"tsukareta","nFiles":16,"totalLoc":1817,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":747,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760862111,"date":"2025-10-19","hash":"ad61b5a2","msg":"change color","nFiles":16,"totalLoc":1817,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":747,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760862934,"date":"2025-10-19","hash":"30e0153e","msg":"improve view on smartphone","nFiles":16,"totalLoc":1823,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":246,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":747,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760863084,"date":"2025-10-19","hash":"05571879","msg":"refactoring","nFiles":16,"totalLoc":1829,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":252,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":747,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760865762,"date":"2025-10-19","hash":"c96cee9a","msg":"font mordal fix","nFiles":16,"totalLoc":1778,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":252,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761138661,"date":"2025-10-22","hash":"df56ea38","msg":"feat:add edit and delete functionality","nFiles":16,"totalLoc":1849,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":252,"src/components/HoverDetail.tsx":221,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761139273,"date":"2025-10-22","hash":"e4cefdca","msg":"commitment error","nFiles":16,"totalLoc":1900,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":303,"src/components/HoverDetail.tsx":221,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761139766,"date":"2025-10-22","hash":"ccd84611","msg":"some bug watchin","nFiles":16,"totalLoc":1908,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":303,"src/components/HoverDetail.tsx":229,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761140282,"date":"2025-10-22","hash":"c4be558e","msg":"add alert","nFiles":16,"totalLoc":1909,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":303,"src/components/HoverDetail.tsx":230,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761140447,"date":"2025-10-22","hash":"666bb0ca","msg":"deploy","nFiles":16,"totalLoc":1962,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":303,"src/components/HoverDetail.tsx":229,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":190,"src/types/index.ts":39}}]};
@@ -92,10 +92,10 @@ const cityGroup=new THREE.Group();
 scene.add(cityGroup);
 
 // ライティング（明るめ: ambient強め+主光2灯）
-scene.add(new THREE.AmbientLight(0xffffff,1.15));
-const hemi=new THREE.HemisphereLight(0xfff8ec,0xcabb9a,0.55);
+scene.add(new THREE.AmbientLight(0xffffff,0.72));
+const hemi=new THREE.HemisphereLight(0xfff8ec,0xcabb9a,0.45);
 scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xffffff,1.6);
+const sun=new THREE.DirectionalLight(0xffffff,1.1);
 sun.position.set(60,140,40);scene.add(sun);
 const fill=new THREE.DirectionalLight(0xe8f0ff,0.5);
 fill.position.set(-60,90,-70);scene.add(fill);
@@ -140,34 +140,65 @@ for(const n of NODES){
   m.add(ol); // アウトライン: scale.yに追従して伸びる
   cityGroup.add(m);pickables.push(m);meshes[n.id]=m;
 }
-// 屋上マーカー（タイムライン「新築」表示用）— 必要時に生成
-const newGeo=new THREE.ConeGeometry(1.4,2.6,4);
-const newMat=new THREE.MeshBasicMaterial({color:0xd96c47});
+// 新築マーカー: 地面に呼吸するリング（錐より静かに「ここ新規」を示す）
+const ringGeo=new THREE.RingGeometry(TILE*0.55,TILE*0.72,40);
+ringGeo.rotateX(-Math.PI/2);
+// 建設予定地の区画（ビル足元サイズの平面）
+const lotGeo=new THREE.PlaneGeometry(TILE*0.86,TILE*0.86);
+lotGeo.rotateX(-Math.PI/2);
+// 建設予定地のストライプテクスチャ（斜め縞・透過）
+const stripes=(function(){
+  var cv=document.createElement('canvas');cv.width=cv.height=28;
+  var g=cv.getContext('2d');
+  g.strokeStyle='rgba(110,102,84,0.9)';g.lineWidth=6;
+  g.beginPath();
+  for(var i=-1;i<3;i++){g.moveTo(i*14-14,28);g.lineTo(i*14+14,0);}
+  g.stroke();
+  var tx=new THREE.CanvasTexture(cv);
+  tx.wrapS=tx.wrapT=THREE.RepeatWrapping;
+  return tx;
+})();
 
 // エッジ（呼び出しを弧で描く）: 主線は太めのグレー、太さはfan-in比例
+// タイムラインでビル高さが動くので、端点のscale.yに毎フレーム追従して弧を張り直す。
+// 高さが変わらなかったエッジは再生成しない（idle時コストほぼゼロ）
 const edgeGroup=new THREE.Group();cityGroup.add(edgeGroup);
+const nodeAt={};
+for(const n of NODES)nodeAt[n.x+','+n.z]=n;
+const liveEdges=[]; // {m, ra(radius), ha, hb}
 function rebuildEdges(){
-  while(edgeGroup.children.length){const c=edgeGroup.children[0];edgeGroup.remove(c);c.geometry.dispose();}
-  // 太い線: TubeGeometry。3d-force-graph準拠の薄さ（linkOpacity既定0.2）に合わせて
-  // 細く薄く。主線だけわずかに濃い
+  while(edgeGroup.children.length){const c=edgeGroup.children[0];edgeGroup.remove(c);c.geometry.dispose();c.material.dispose();}
   const maxFan=Math.max(...NODES.map(n=>n.fanIn),1);
   for(const e of EDGES){
-    var fanInTo=0;
-    for(const n of NODES){if(n.x===e.b.x&&n.z===e.b.z){fanInTo=n.fanIn;break;}}
-    const importance=Math.pow(fanInTo/maxFan,0.6);       // 0..1
+    const na=nodeAt[e.a.x+','+e.a.z], nb=nodeAt[e.b.x+','+e.b.z];
+    if(!na||!nb)continue;
+    const importance=Math.pow(nb.fanIn/maxFan,0.6);      // 0..1（fan-in比例）
     const radius=0.02+importance*0.05;                   // ヘアライン寄り
-    const curve=new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(e.a.x,e.a.h,e.a.z),
-      new THREE.Vector3((e.a.x+e.b.x)/2,Math.max(e.a.h,e.b.h)+16,(e.a.z+e.b.z)/2),
-      new THREE.Vector3(e.b.x,e.b.h,e.b.z));
-    const g=new THREE.TubeGeometry(curve,20,radius,5,false);
     var col=importance>0.45?0x6f6754:0xb3ab92;
     var op=0.2+importance*0.28;                          // 既定0.2、主線でも~0.48
-    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col,transparent:true,opacity:op}));
+    const m=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshLambertMaterial({color:col,transparent:true,opacity:op}));
+    m.userData={aM:meshes[na.id],bM:meshes[nb.id]};
     edgeGroup.add(m);
+    liveEdges.push({m:m,ra:radius,ha:-1,hb:-1});
   }
 }
 rebuildEdges();
+function updateEdgeHeights(){
+  for(const e of liveEdges){
+    const ma=e.m.userData.aM, mb=e.m.userData.bM;
+    if(!ma||!mb||!ma.visible||!mb.visible){e.m.visible=false;continue;} // 未誕生ビルへは配線しない
+    e.m.visible=true;
+    var ha=Math.round(ma.scale.y*10)/10, hb=Math.round(mb.scale.y*10)/10; // 量子化で再張りを抑制
+    if(ha===e.ha&&hb===e.hb)continue;
+    e.ha=ha;e.hb=hb;
+    e.m.geometry.dispose();
+    const curve=new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(ma.position.x,ha,ma.position.z),
+      new THREE.Vector3((ma.position.x+mb.position.x)/2,Math.max(ha,hb)+16,(ma.position.z+mb.position.z)/2),
+      new THREE.Vector3(mb.position.x,hb,mb.position.z));
+    e.m.geometry=new THREE.TubeGeometry(curve,20,e.ra,5,false);
+  }
+}
 
 // ---- カメラ操作（ドラッグ=パン / 右・⌘+Ctrl+ドラッグ=回転）----
 let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(8.0,0,14.0);
@@ -357,6 +388,7 @@ function loop(){
     a.m.scale.y=a.h0+(a.h1-a.h0)*e;
     if(k>=1)timeAnims.splice(i,1);
   }
+  updateEdgeHeights(); // ワイヤ端点をビル高さに追従（変化なしフレームは実質ゼロコスト）
   renderer.render(scene,camera);
 }
 loop();
@@ -365,7 +397,7 @@ loop();
 if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
   const range=document.getElementById('tb-range'),label=document.getElementById('tb-label'),playBtn=document.getElementById('tb-play');
   range.max=TIMELINE.frames.length-1;
-  var playTimer=null,anims=timeAnims;
+  var playTimer=null,anims=timeAnims,timeMarkers=[];
   function setHeight(m,h){ // 誕生アニメ: 現在値→目標へcubic-outで立ち上がる
     anims.push({m,h0:m.scale.y,h1:h,t:0});
   }
@@ -373,10 +405,16 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
     // 前フレーム掃除: 実行中アニメを完成値に落着させ、マーカー撤去
     for(const a of anims)a.m.scale.y=a.h1;
     anims=[];
-    cityGroup.children.filter(c=>c.userData.marker).forEach(c=>{cityGroup.remove(c);});
+    for(const mk of timeMarkers){cityGroup.remove(mk);mk.material.dispose();}
+    timeMarkers=[];
     if(i<0){ // -1 = 現在
       label.textContent='現在 — '+NODES.length+'files';
-      for(const n of NODES){const m=meshes[n.id];m.scale.y=n.h;m.visible=true;m.material.opacity=1;m.material.transparent=false;}
+      for(const n of NODES){
+        const m=meshes[n.id];
+        m.scale.y=n.h;m.visible=true;
+        m.material.map=null;m.material.needsUpdate=true;
+        m.material.opacity=1;m.material.transparent=false;
+      }
       range.value=TIMELINE.frames.length-1;
       return;
     }
@@ -386,28 +424,66 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
       const m=meshes[n.id];
       var loc=f.files[n.id];
       if(loc!==undefined){
-        // 当時存在: LOC比率で伸縮（成長が見える）
-        var ratio=Math.max(loc,1)/Math.max(n.loc,1);
-        m.visible=true;m.material.opacity=1;m.material.transparent=false;
-        m.scale.y=Math.max(0.5,n.h*ratio);
-        // 新築（前フレームに無い）は屋上マーカー+ポップ
+        // 当時存在: 目標高さ=LOC比率。現在高さから目標へ必ずアニメで動く
+        var targetH=Math.max(0.5,n.h*ratioOf(n,loc));
+        m.visible=true;
+        m.material.opacity=1;m.material.transparent=false;
         var prev=i>0?TIMELINE.frames[i-1].files[n.id]:undefined;
         if(prev===undefined){
-          setHeight(m,Math.max(0.5,n.h*ratio));
-          const cone=new THREE.Mesh(newGeo,newMat);
-          cone.position.set(n.x,n.h*ratio+1.3,n.z);
-          cone.userData.marker=true;
-          cityGroup.add(cone);
+          // 新築: 0から立ち上がる＋地面リング
+          m.scale.y=0.001;
+          anims.push({m,h0:0,h1:targetH,t:0});
+          var mk=new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:0xd96c47,transparent:true,opacity:0.85,side:THREE.DoubleSide}));
+          mk.position.set(n.x,0.05,n.z);
+          cityGroup.add(mk);
+          timeMarkers.push(mk);
+        } else if(Math.abs(m.scale.y-targetH)>0.05){
+          anims.push({m,h0:m.scale.y,h1:targetH,t:0}); // 成長・縮小もなめらか
+        } else {
+          m.scale.y=targetH;
         }
       } else {
-        // 未誕生: 更地（潰して半透明）
-        m.visible=true;m.scale.y=0.02;
-        m.material.transparent=true;m.material.opacity=0.12;
+        // 未誕生: ビルは出さず、地面にストライプの建設区画を敷く
+        m.visible=false;
+        var lot=new THREE.Mesh(lotGeo,new THREE.MeshBasicMaterial({map:stripes,transparent:true,opacity:0.9}));
+        lot.position.set(n.x,0.04,n.z);
+        cityGroup.add(lot);
+        timeMarkers.push(lot);
       }
     }
     range.value=i;
   }
+  function ratioOf(n,loc){return Math.max(loc,1)/Math.max(n.loc,1);}
   window.__applyTimeframe=applyFrame; // QA用
+  window.__edges=function(){ // QA用: ワイヤ追従状態
+    var vis=0,bad=0;
+    for(var i=0;i<liveEdges.length;i++){
+      var e=liveEdges[i];
+      if(!e.m.visible)continue;
+      vis++;
+      var A=e.m.userData.aM,B=e.m.userData.bM;
+      if(Math.abs(e.ha-A.scale.y)>0.05||Math.abs(e.hb-B.scale.y)>0.05)bad++;
+    }
+    return {total:liveEdges.length,visible:vis,detached:bad};
+  };
+  window.__nodes=function(){ // QA用: 各ビルの材質色・高さ・画面座標
+    var out=[];
+    for(var k in meshes){
+      var m=meshes[k];
+      var v=new THREE.Vector3(m.position.x,m.scale.y*0.6,m.position.z).project(camera);
+      var vt=new THREE.Vector3(m.position.x,m.scale.y,m.position.z).project(camera);
+      out.push({id:k,color:'#'+m.material.color.getHexString(),opacity:m.material.opacity,
+        h:+m.scale.y.toFixed(2),
+        sx:Math.round((v.x*0.5+0.5)*innerWidth),sy:Math.round((-v.y*0.5+0.5)*innerHeight),
+        tx:Math.round((vt.x*0.5+0.5)*innerWidth),ty:Math.round((-vt.y*0.5+0.5)*innerHeight)});
+    }
+    return out;
+  };
+  window.__tlState=function(){return {
+    rings:timeMarkers.filter(function(mk){return !mk.material.map}).length,
+    lots:timeMarkers.length-timeMarkers.filter(function(mk){return !mk.material.map}).length,
+    moving:timeAnims.length
+  }};
   applyFrame(-1);
   range.addEventListener('input',function(){stopPlay();applyFrame(+range.value);});
   document.getElementById('tb-now').onclick=function(){stopPlay();applyFrame(-1);};

@@ -8,7 +8,7 @@ const THREE_CORE_SRC = new URL('../node_modules/three/build/three.core.min.js', 
 
 const KIND_COLORS = {
   page: 0xe0b34c, component: 0x7fb069, api: 0xd96c47, hook: 0x5aa9d6,
-  lib: 0x9b7fd4, type: 0x8a8a8a, test: 0x5f7d5f, module: 0xb0a486,
+  lib: 0x9b7fd4, type: 0x6e6858, test: 0x5f7d5f, module: 0xb0a486,
 };
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
@@ -195,10 +195,10 @@ const cityGroup=new THREE.Group();
 scene.add(cityGroup);
 
 // ライティング（明るめ: ambient強め+主光2灯）
-scene.add(new THREE.AmbientLight(0xffffff,1.15));
-const hemi=new THREE.HemisphereLight(0xfff8ec,0xcabb9a,0.55);
+scene.add(new THREE.AmbientLight(0xffffff,0.72));
+const hemi=new THREE.HemisphereLight(0xfff8ec,0xcabb9a,0.45);
 scene.add(hemi);
-const sun=new THREE.DirectionalLight(0xffffff,1.6);
+const sun=new THREE.DirectionalLight(0xffffff,1.1);
 sun.position.set(60,140,40);scene.add(sun);
 const fill=new THREE.DirectionalLight(0xe8f0ff,0.5);
 fill.position.set(-60,90,-70);scene.add(fill);
@@ -243,34 +243,65 @@ for(const n of NODES){
   m.add(ol); // アウトライン: scale.yに追従して伸びる
   cityGroup.add(m);pickables.push(m);meshes[n.id]=m;
 }
-// 屋上マーカー（タイムライン「新築」表示用）— 必要時に生成
-const newGeo=new THREE.ConeGeometry(1.4,2.6,4);
-const newMat=new THREE.MeshBasicMaterial({color:0xd96c47});
+// 新築マーカー: 地面に呼吸するリング（錐より静かに「ここ新規」を示す）
+const ringGeo=new THREE.RingGeometry(TILE*0.55,TILE*0.72,40);
+ringGeo.rotateX(-Math.PI/2);
+// 建設予定地の区画（ビル足元サイズの平面）
+const lotGeo=new THREE.PlaneGeometry(TILE*0.86,TILE*0.86);
+lotGeo.rotateX(-Math.PI/2);
+// 建設予定地のストライプテクスチャ（斜め縞・透過）
+const stripes=(function(){
+  var cv=document.createElement('canvas');cv.width=cv.height=28;
+  var g=cv.getContext('2d');
+  g.strokeStyle='rgba(110,102,84,0.9)';g.lineWidth=6;
+  g.beginPath();
+  for(var i=-1;i<3;i++){g.moveTo(i*14-14,28);g.lineTo(i*14+14,0);}
+  g.stroke();
+  var tx=new THREE.CanvasTexture(cv);
+  tx.wrapS=tx.wrapT=THREE.RepeatWrapping;
+  return tx;
+})();
 
 // エッジ（呼び出しを弧で描く）: 主線は太めのグレー、太さはfan-in比例
+// タイムラインでビル高さが動くので、端点のscale.yに毎フレーム追従して弧を張り直す。
+// 高さが変わらなかったエッジは再生成しない（idle時コストほぼゼロ）
 const edgeGroup=new THREE.Group();cityGroup.add(edgeGroup);
+const nodeAt={};
+for(const n of NODES)nodeAt[n.x+','+n.z]=n;
+const liveEdges=[]; // {m, ra(radius), ha, hb}
 function rebuildEdges(){
-  while(edgeGroup.children.length){const c=edgeGroup.children[0];edgeGroup.remove(c);c.geometry.dispose();}
-  // 太い線: TubeGeometry。3d-force-graph準拠の薄さ（linkOpacity既定0.2）に合わせて
-  // 細く薄く。主線だけわずかに濃い
+  while(edgeGroup.children.length){const c=edgeGroup.children[0];edgeGroup.remove(c);c.geometry.dispose();c.material.dispose();}
   const maxFan=Math.max(...NODES.map(n=>n.fanIn),1);
   for(const e of EDGES){
-    var fanInTo=0;
-    for(const n of NODES){if(n.x===e.b.x&&n.z===e.b.z){fanInTo=n.fanIn;break;}}
-    const importance=Math.pow(fanInTo/maxFan,0.6);       // 0..1
+    const na=nodeAt[e.a.x+','+e.a.z], nb=nodeAt[e.b.x+','+e.b.z];
+    if(!na||!nb)continue;
+    const importance=Math.pow(nb.fanIn/maxFan,0.6);      // 0..1（fan-in比例）
     const radius=0.02+importance*0.05;                   // ヘアライン寄り
-    const curve=new THREE.QuadraticBezierCurve3(
-      new THREE.Vector3(e.a.x,e.a.h,e.a.z),
-      new THREE.Vector3((e.a.x+e.b.x)/2,Math.max(e.a.h,e.b.h)+16,(e.a.z+e.b.z)/2),
-      new THREE.Vector3(e.b.x,e.b.h,e.b.z));
-    const g=new THREE.TubeGeometry(curve,20,radius,5,false);
     var col=importance>0.45?0x6f6754:0xb3ab92;
     var op=0.2+importance*0.28;                          // 既定0.2、主線でも~0.48
-    const m=new THREE.Mesh(g,new THREE.MeshLambertMaterial({color:col,transparent:true,opacity:op}));
+    const m=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshLambertMaterial({color:col,transparent:true,opacity:op}));
+    m.userData={aM:meshes[na.id],bM:meshes[nb.id]};
     edgeGroup.add(m);
+    liveEdges.push({m:m,ra:radius,ha:-1,hb:-1});
   }
 }
 rebuildEdges();
+function updateEdgeHeights(){
+  for(const e of liveEdges){
+    const ma=e.m.userData.aM, mb=e.m.userData.bM;
+    if(!ma||!mb||!ma.visible||!mb.visible){e.m.visible=false;continue;} // 未誕生ビルへは配線しない
+    e.m.visible=true;
+    var ha=Math.round(ma.scale.y*10)/10, hb=Math.round(mb.scale.y*10)/10; // 量子化で再張りを抑制
+    if(ha===e.ha&&hb===e.hb)continue;
+    e.ha=ha;e.hb=hb;
+    e.m.geometry.dispose();
+    const curve=new THREE.QuadraticBezierCurve3(
+      new THREE.Vector3(ma.position.x,ha,ma.position.z),
+      new THREE.Vector3((ma.position.x+mb.position.x)/2,Math.max(ha,hb)+16,(ma.position.z+mb.position.z)/2),
+      new THREE.Vector3(mb.position.x,hb,mb.position.z));
+    e.m.geometry=new THREE.TubeGeometry(curve,20,e.ra,5,false);
+  }
+}
 
 // ---- カメラ操作（ドラッグ=パン / 右・⌘+Ctrl+ドラッグ=回転）----
 let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(${CITY_CX},0,${CITY_CZ});
@@ -460,6 +491,7 @@ function loop(){
     a.m.scale.y=a.h0+(a.h1-a.h0)*e;
     if(k>=1)timeAnims.splice(i,1);
   }
+  updateEdgeHeights(); // ワイヤ端点をビル高さに追従（変化なしフレームは実質ゼロコスト）
   renderer.render(scene,camera);
 }
 loop();
@@ -468,7 +500,7 @@ loop();
 if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
   const range=document.getElementById('tb-range'),label=document.getElementById('tb-label'),playBtn=document.getElementById('tb-play');
   range.max=TIMELINE.frames.length-1;
-  var playTimer=null,anims=timeAnims;
+  var playTimer=null,anims=timeAnims,timeMarkers=[];
   function setHeight(m,h){ // 誕生アニメ: 現在値→目標へcubic-outで立ち上がる
     anims.push({m,h0:m.scale.y,h1:h,t:0});
   }
@@ -476,10 +508,16 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
     // 前フレーム掃除: 実行中アニメを完成値に落着させ、マーカー撤去
     for(const a of anims)a.m.scale.y=a.h1;
     anims=[];
-    cityGroup.children.filter(c=>c.userData.marker).forEach(c=>{cityGroup.remove(c);});
+    for(const mk of timeMarkers){cityGroup.remove(mk);mk.material.dispose();}
+    timeMarkers=[];
     if(i<0){ // -1 = 現在
       label.textContent='現在 — '+NODES.length+'files';
-      for(const n of NODES){const m=meshes[n.id];m.scale.y=n.h;m.visible=true;m.material.opacity=1;m.material.transparent=false;}
+      for(const n of NODES){
+        const m=meshes[n.id];
+        m.scale.y=n.h;m.visible=true;
+        m.material.map=null;m.material.needsUpdate=true;
+        m.material.opacity=1;m.material.transparent=false;
+      }
       range.value=TIMELINE.frames.length-1;
       return;
     }
@@ -489,28 +527,66 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
       const m=meshes[n.id];
       var loc=f.files[n.id];
       if(loc!==undefined){
-        // 当時存在: LOC比率で伸縮（成長が見える）
-        var ratio=Math.max(loc,1)/Math.max(n.loc,1);
-        m.visible=true;m.material.opacity=1;m.material.transparent=false;
-        m.scale.y=Math.max(0.5,n.h*ratio);
-        // 新築（前フレームに無い）は屋上マーカー+ポップ
+        // 当時存在: 目標高さ=LOC比率。現在高さから目標へ必ずアニメで動く
+        var targetH=Math.max(0.5,n.h*ratioOf(n,loc));
+        m.visible=true;
+        m.material.opacity=1;m.material.transparent=false;
         var prev=i>0?TIMELINE.frames[i-1].files[n.id]:undefined;
         if(prev===undefined){
-          setHeight(m,Math.max(0.5,n.h*ratio));
-          const cone=new THREE.Mesh(newGeo,newMat);
-          cone.position.set(n.x,n.h*ratio+1.3,n.z);
-          cone.userData.marker=true;
-          cityGroup.add(cone);
+          // 新築: 0から立ち上がる＋地面リング
+          m.scale.y=0.001;
+          anims.push({m,h0:0,h1:targetH,t:0});
+          var mk=new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:0xd96c47,transparent:true,opacity:0.85,side:THREE.DoubleSide}));
+          mk.position.set(n.x,0.05,n.z);
+          cityGroup.add(mk);
+          timeMarkers.push(mk);
+        } else if(Math.abs(m.scale.y-targetH)>0.05){
+          anims.push({m,h0:m.scale.y,h1:targetH,t:0}); // 成長・縮小もなめらか
+        } else {
+          m.scale.y=targetH;
         }
       } else {
-        // 未誕生: 更地（潰して半透明）
-        m.visible=true;m.scale.y=0.02;
-        m.material.transparent=true;m.material.opacity=0.12;
+        // 未誕生: ビルは出さず、地面にストライプの建設区画を敷く
+        m.visible=false;
+        var lot=new THREE.Mesh(lotGeo,new THREE.MeshBasicMaterial({map:stripes,transparent:true,opacity:0.9}));
+        lot.position.set(n.x,0.04,n.z);
+        cityGroup.add(lot);
+        timeMarkers.push(lot);
       }
     }
     range.value=i;
   }
+  function ratioOf(n,loc){return Math.max(loc,1)/Math.max(n.loc,1);}
   window.__applyTimeframe=applyFrame; // QA用
+  window.__edges=function(){ // QA用: ワイヤ追従状態
+    var vis=0,bad=0;
+    for(var i=0;i<liveEdges.length;i++){
+      var e=liveEdges[i];
+      if(!e.m.visible)continue;
+      vis++;
+      var A=e.m.userData.aM,B=e.m.userData.bM;
+      if(Math.abs(e.ha-A.scale.y)>0.05||Math.abs(e.hb-B.scale.y)>0.05)bad++;
+    }
+    return {total:liveEdges.length,visible:vis,detached:bad};
+  };
+  window.__nodes=function(){ // QA用: 各ビルの材質色・高さ・画面座標
+    var out=[];
+    for(var k in meshes){
+      var m=meshes[k];
+      var v=new THREE.Vector3(m.position.x,m.scale.y*0.6,m.position.z).project(camera);
+      var vt=new THREE.Vector3(m.position.x,m.scale.y,m.position.z).project(camera);
+      out.push({id:k,color:'#'+m.material.color.getHexString(),opacity:m.material.opacity,
+        h:+m.scale.y.toFixed(2),
+        sx:Math.round((v.x*0.5+0.5)*innerWidth),sy:Math.round((-v.y*0.5+0.5)*innerHeight),
+        tx:Math.round((vt.x*0.5+0.5)*innerWidth),ty:Math.round((-vt.y*0.5+0.5)*innerHeight)});
+    }
+    return out;
+  };
+  window.__tlState=function(){return {
+    rings:timeMarkers.filter(function(mk){return !mk.material.map}).length,
+    lots:timeMarkers.length-timeMarkers.filter(function(mk){return !mk.material.map}).length,
+    moving:timeAnims.length
+  }};
   applyFrame(-1);
   range.addEventListener('input',function(){stopPlay();applyFrame(+range.value);});
   document.getElementById('tb-now').onclick=function(){stopPlay();applyFrame(-1);};
