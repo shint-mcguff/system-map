@@ -1,0 +1,37 @@
+{
+  "src/lib/supabase.ts": {
+    "supabase": "Supabaseクライアント。全DB/Storage操作の入口（環境変数の鍵で初期化）",
+    "getRestaurants": "restaurantsテーブルを全件・新着順で取得しRestaurant型に整形",
+    "addRestaurant": "新規レストランをDBにinsert（スネークケースへ変換）",
+    "updateRestaurant": "指定idのレストラン情報をupdate",
+    "deleteRestaurant": "レストラン削除。写真があれば先にdeleteRestaurantPhotoで除去",
+    "uploadRestaurantPhoto": "店写真をStorageへ。5MB/JPG,PNG,WebP制限チェックつき",
+    "deleteRestaurantPhoto": "URLからファイルパスを逆算してStorageから削除"
+  },
+  "src/components/Map.tsx": {
+    "Map": "Mapbox地図本体。店舗ピン表示・テーマ切替・位置選択モードを担う中核コンポーネント"
+  },
+  "src/components/HoverDetail.tsx": {
+    "HoverDetail": "店舗ピン押下時の下部カード。写真・喫煙状況・編集/削除ボタンを表示"
+  },
+  "src/components/ThemeToggle.tsx": {
+    "ThemeToggle": "ライト/ダーク切替の丸ボタン（右上固定）"
+  },
+  "src/components/RestaurantForm.tsx": {
+    "getCoordinatesFromAddress": "Google Geocoding APIで住所文字列→緯度経度",
+    "getAddressFromCoordinates": "同APIのリバース: 緯度経度→住所文字列",
+    "RestaurantForm": "店舗登録/編集フォーム。住所→座標変換・地図ピッカー・写真アップロードを統合"
+  },
+  "src/config/theme.ts": {
+    "lightTheme": "ライトモードの配色トークン一式",
+    "darkTheme": "ダークモードの配色トークン一式",
+    "getTheme": "ThemeMode→配色オブジェクトの取得",
+    "mapboxStyles": "ライト/ダーク用のMapboxスタイルURL"
+  },
+  "src/types/index.ts": {
+    "SmokingType": "喫煙状況の3値（喫煙可/電子のみ/禁煙）",
+    "Restaurant": "レストラン情報の中核データ型。UIとDBの橋渡し",
+    "ThemeMode": "'light' | 'dark'",
+    "ThemeColors": "テーマ配色の型定義"
+  }
+}

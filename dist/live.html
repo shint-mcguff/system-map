@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><rect width='16' height='16' fill='%23efe8d6'/><path d='M8 2l6 3.5v5L8 14l-6-3.5v-5z' fill='%23d96c47'/></svg>">
+<title>System Map — herdr-chat</title>
+<style>
+:root{--bg:#efe8d6;--ink:#14120b;--card:#faf6ea;--accent:#d96c47}
+*{box-sizing:border-box;margin:0}
+body{background:var(--bg);color:var(--ink);font:14px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+header{padding:14px 20px;border-bottom:2px solid var(--ink);display:flex;gap:24px;align-items:baseline;flex-wrap:wrap;background:var(--card)}
+header h1{font-size:18px;letter-spacing:.04em}
+.stat b{font-size:16px}.stat span{opacity:.65;font-size:12px}
+#wrap{position:relative;height:calc(100vh - 58px);overflow:hidden}
+svg{width:100%;height:100%;cursor:grab;touch-action:none}
+svg.grabbing{cursor:grabbing}
+.dist{fill:#e6ddc4;stroke:#c9bd9c;stroke-width:1}
+.dist-label{font-size:11px;fill:#7a7052;text-anchor:middle;text-transform:uppercase;letter-spacing:.08em}
+.edge{fill:none;stroke:#d96c47;stroke-width:.7;opacity:.35;pointer-events:none}
+.b:hover polygon{filter:brightness(1.15)}
+.b.sel polygon{stroke:var(--accent);stroke-width:2}
+.flabel{font-size:9px;fill:#3d3826;text-anchor:middle;pointer-events:none;font-weight:600;display:none}
+svg.zoomed-in .flabel{display:block}
+#panel{position:absolute;top:12px;right:12px;width:320px;max-height:calc(100% - 24px);overflow:auto;background:var(--card);border:2px solid var(--ink);padding:14px;display:none}
+#panel h2{font-size:13px;word-break:break-all}
+#panel .row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed #d8cfb4}
+#panel .sec{margin-top:10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.6;border-bottom:1px solid #d8cfb4;padding-bottom:2px}
+#panel .sym{display:flex;gap:6px;align-items:baseline;font-size:11px;padding:2px 0}
+#panel .sym i{font-style:normal;color:var(--accent);width:12px;flex:none}
+#panel .sym code{word-break:break-all}
+#panel .sym span{opacity:.45;margin-left:auto;flex:none}
+#panel .sym.none{opacity:.5}
+#panel .users{font-size:10px;opacity:.75;padding:0 0 4px 18px;line-height:1.6}
+#panel .users a{color:var(--accent);cursor:pointer;text-decoration:none}
+#panel .sym-note{font-size:10.5px;color:#5a5238;padding:0 0 4px 18px;line-height:1.5;border-left:2px solid var(--accent);margin-left:4px}
+#panel .deps{margin-top:8px;font-size:11px;line-height:1.7;word-break:break-all}
+#panel .deps a{color:var(--accent);cursor:pointer;text-decoration:none}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px}
+.lg i{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:-1px;border:1px solid #14120b}
+.hint{margin-left:auto;font-size:11px;opacity:.55}
+.meaning{font-size:11px;opacity:.75;border-left:3px solid var(--accent);padding-left:8px}
+.mbtn{font:12px/1 inherit;padding:6px 12px;border:1.5px solid var(--ink);background:var(--card);cursor:pointer;color:var(--ink)}
+.mbtn:hover{background:var(--accent);color:#fff}
+#q{font:12px/1.4 inherit;padding:5px 9px;border:1.5px solid var(--ink);background:#fff;width:170px}
+#q:focus{outline:2px solid var(--accent)}
+#results{position:absolute;top:52px;right:20px;width:300px;max-height:50vh;overflow:auto;background:var(--card);border:2px solid var(--ink);display:none;z-index:10}
+#results .r{padding:6px 10px;font-size:12px;cursor:pointer;display:flex;justify-content:space-between;gap:8px}
+#results .r:hover,#results .r.on{background:var(--accent);color:#fff}
+#results .r small{opacity:.6}
+#drill{margin-top:10px;width:100%;padding:8px;background:var(--ink);color:var(--card);border:0;font:inherit;cursor:pointer}
+#drill:hover{background:#3a3423}
+#sub{position:absolute;inset:0;background:rgba(239,232,214,.97);display:none;flex-direction:column;padding:16px 20px;z-index:5}
+.subhead{font-size:13px;border-bottom:2px solid var(--ink);padding-bottom:6px;margin-bottom:8px}
+#subsvg{flex:1;width:100%;min-height:0}
+.flabel2{font-size:11px;fill:#14120b;text-anchor:middle;font-weight:700;pointer-events:none}
+.fedge{fill:none;stroke:#7a7052;stroke-width:1.4;opacity:.55;marker-end:url(#arrow)}
+.fnode{cursor:pointer}
+.fnode:hover rect{filter:brightness(1.12);stroke-width:2}
+.fsub{font-size:9px;fill:#3d3826;text-anchor:middle;opacity:.7;pointer-events:none}
+.panzoom{cursor:grab;touch-action:none}
+.panzoom.grabbing{cursor:grabbing}
+.fb.has-note .fbrect{stroke-width:1.6}
+.notedot{fill:#fff200;stroke:#14120b;stroke-width:.8}
+#notebox{position:absolute;top:56px;right:16px;width:300px;background:var(--card);border:2px solid var(--ink);padding:10px 12px;z-index:7;box-shadow:4px 4px 0 rgba(20,18,11,.12)}
+.nb-title{font-size:10px;text-transform:uppercase;letter-spacing:.08em;opacity:.55;margin-bottom:4px}
+.nb-body{font-size:12px;line-height:1.6}
+.chips{display:flex;gap:6px;flex-wrap:wrap;padding-top:10px}
+.chip{font-size:11px;border:1.5px solid var(--ink);background:var(--card);padding:3px 8px;cursor:pointer}
+.chip:hover{background:var(--accent);color:#fff}
+.chip em{opacity:.55;font-style:normal}
+#subinfo{position:absolute;left:20px;top:52px;max-width:46%;background:var(--card);border:2px solid var(--ink);padding:10px 12px;font-size:12px;display:none;z-index:6}
+#subinfo a{color:var(--accent);cursor:pointer;text-decoration:none}
+.b.lit polygon{stroke:#fff200;stroke-width:2.5;filter:brightness(1.25)}
+.b.dim polygon{opacity:.18}
+@media(max-width:720px){#panel{width:calc(100% - 24px)}}
+</style></head><body>
+<header>
+<h1>⬡ herdr-chat</h1>
+<span class="stat"><b>5</b><span>files</span></span>
+<span class="stat"><b>2,387</b><span>loc</span></span>
+<span class="stat"><b>2</b><span>imports</span></span>
+<span class="stat"><b>1</b><span>districts</span></span>
+<span class="stat"><b>19</b><span>ext pkgs</span></span>
+<span class="legend"><span class="lg"><i style="background:#e0b34c"></i>page</span><span class="lg"><i style="background:#7fb069"></i>component</span><span class="lg"><i style="background:#d96c47"></i>api</span><span class="lg"><i style="background:#5aa9d6"></i>hook</span><span class="lg"><i style="background:#9b7fd4"></i>lib</span><span class="lg"><i style="background:#8a8a8a"></i>type</span><span class="lg"><i style="background:#5f7d5f"></i>test</span><span class="lg"><i style="background:#b0a486"></i>module</span></span>
+<span class="meaning">高さ＝使われている数 · 色＝種類</span>
+<button id="mode-flow" class="mbtn">⇢ フロー表示</button>
+<input id="q" placeholder="⌕ ファイルを検索 ( / )" autocomplete="off">
+<div id="results"></div>
+<span class="hint">drag:pan · wheel:zoom · click:詳細 · dbl-click:reset</span>
+</header>
+<div id="wrap">
+<svg id="city" viewBox="-220 -150 572 600">
+<g id="scene"><polygon points="0,-26.4 140.8,44 0,114.4 -140.8,44" class="dist"/><path class="edge" d="M88,35 Q44,-104 0,-74"/><path class="edge" d="M44,12 Q22,-104 0,-74"/><g class="b" data-id="server.py"><polygon points="-44,-74 0,-52 0,22 -44,0" fill="#94886a" stroke="#14120b" stroke-width="0.5"/><polygon points="0,-52 44,-74 44,0 0,22" fill="#a29678" stroke="#14120b" stroke-width="0.5"/><polygon points="0,-96 44,-74 0,-52 -44,-74" fill="#b0a486" stroke="#14120b" stroke-width="0.5"><title>server.py · loc:1698 in:2</title></polygon><text class="flabel" x="0" y="-100">server.py</text></g><g class="b" data-id="test_self_post.py"><polygon points="0,12 44,34 44,44 0,22" fill="#94886a" stroke="#14120b" stroke-width="0.5"/><polygon points="44,34 88,12 88,22 44,44" fill="#a29678" stroke="#14120b" stroke-width="0.5"/><polygon points="44,-10 88,12 44,34 0,12" fill="#b0a486" stroke="#14120b" stroke-width="0.5"><title>test_self_post.py · loc:383 in:0</title></polygon><text class="flabel" x="44" y="-14">test_self_post.py</text></g><g class="b" data-id="test_stop_hook.py"><polygon points="-88,14 -44,36 -44,44 -88,22" fill="#94886a" stroke="#14120b" stroke-width="0.5"/><polygon points="-44,36 0,14 0,22 -44,44" fill="#a29678" stroke="#14120b" stroke-width="0.5"/><polygon points="-44,-8 0,14 -44,36 -88,14" fill="#b0a486" stroke="#14120b" stroke-width="0.5"><title>test_stop_hook.py · loc:76 in:0</title></polygon><text class="flabel" x="-44" y="-12">test_stop_hook.py</text></g><g class="b" data-id="sw.js"><polygon points="-44,36 0,58 0,66 -44,44" fill="#94886a" stroke="#14120b" stroke-width="0.5"/><polygon points="0,58 44,36 44,44 0,66" fill="#a29678" stroke="#14120b" stroke-width="0.5"/><polygon points="0,14 44,36 0,58 -44,36" fill="#b0a486" stroke="#14120b" stroke-width="0.5"><title>sw.js · loc:29 in:0</title></polygon><text class="flabel" x="0" y="10">sw.js</text></g><g class="b" data-id="test_restart.py"><polygon points="44,35 88,57 88,66 44,44" fill="#94886a" stroke="#14120b" stroke-width="0.5"/><polygon points="88,57 132,35 132,44 88,66" fill="#a29678" stroke="#14120b" stroke-width="0.5"/><polygon points="88,13 132,35 88,57 44,35" fill="#b0a486" stroke="#14120b" stroke-width="0.5"><title>test_restart.py · loc:201 in:0</title></polygon><text class="flabel" x="88" y="9">test_restart.py</text></g><text x="-118.80000000000001" y="103.4" class="dist-label">(root)</text></g>
+</svg>
+<div id="panel"></div>
+<div id="sub"></div>
+<div id="subinfo"></div>
+</div>
+<script>
+(function(){
+  var NODES=[{"id":"server.py","kind":"module","district":"(root)","loc":1698,"fanIn":2,"deps":[],"syms":[{"k":"fn","n":"herdr","l":43},{"k":"fn","n":"herdr_json","l":50},{"k":"fn","n":"is_chrome","l":83},{"k":"fn","n":"is_self_post_tool_trace","l":94},{"k":"fn","n":"clean_agent_reply","l":98},{"k":"fn","n":"parse_transcript","l":111},{"k":"fn","n":"page_ver","l":183},{"k":"fn","n":"mentioned_in","l":190},{"k":"fn","n":"room_cfg","l":210},{"k":"fn","n":"room_post","l":215},{"k":"fn","n":"type_into","l":248},{"k":"fn","n":"submit_to_pane","l":259},{"k":"fn","n":"device_active","l":294},{"k":"fn","n":"init_vapid","l":301},{"k":"fn","n":"subs_load","l":321},{"k":"fn","n":"subs_save","l":331},{"k":"fn","n":"subs_upsert","l":337},{"k":"fn","n":"subs_remove","l":344},{"k":"fn","n":"push_label","l":349},{"k":"fn","n":"schedule_push","l":358},{"k":"fn","n":"_flush_push","l":372},{"k":"fn","n":"_send_pushes","l":389},{"k":"fn","n":"_journal_write","l":422},{"k":"fn","n":"journal_open","l":428},{"k":"fn","n":"journal_update","l":436},{"k":"fn","n":"journal_done","l":440},{"k":"fn","n":"journal_claim_send","l":446},{"k":"fn","n":"self_post_succeeded","l":458},{"k":"fn","n":"wait_for_self_post","l":466},{"k":"fn","n":"accept_self_post","l":483},{"k":"fn","n":"_finish_self_post_commit","l":517},{"k":"fn","n":"reserve_self_post","l":539},{"k":"fn","n":"_journal_fold","l":570},{"k":"fn","n":"journal_get","l":586},{"k":"fn","n":"journal_load_and_compact","l":590},{"k":"fn","n":"recover_deliveries","l":615},{"k":"fn","n":"_recover_one","l":636},{"k":"fn","n":"wait_status","l":680},{"k":"fn","n":"wait_idle_watching","l":692},{"k":"fn","n":"read_reply","l":714},{"k":"fn","n":"pane_probe_state","l":739},{"k":"fn","n":"capture_reply","l":751},{"k":"fn","n":"retry_capture","l":762},{"k":"fn","n":"inject","l":778},{"k":"fn","n":"spawn_worker","l":873},{"k":"fn","n":"_spawn_worker","l":882},{"k":"fn","n":"_atomic_json","l":934},{"k":"fn","n":"restart_config","l":943},{"k":"fn","n":"_restart_path","l":956},{"k":"fn","n":"_persist_restart","l":960},{"k":"fn","n":"_unfinished","l":966},{"k":"fn","n":"_parse_handoff","l":983},{"k":"fn","n":"_request_handoff","l":1011},{"k":"fn","n":"_make_handoff","l":1037},{"k":"fn","n":"restart_preflight","l":1046},{"k":"fn","n":"begin_restart","l":1073},{"k":"fn","n":"_finish_restart_drain","l":1099},{"k":"fn","n":"_read_text","l":1130},{"k":"fn","n":"build_boot_packet","l":1135},{"k":"fn","n":"_start_declared","l":1161},{"k":"fn","n":"_parse_restart_ack","l":1199},{"k":"fn","n":"_capture_restart_ack","l":1208},{"k":"fn","n":"validate_restart_ack","l":1225},{"k":"fn","n":"confirm_restart","l":1250},{"k":"fn","n":"hold_delivery","l":1303},{"k":"fn","n":"resume_held","l":1321},{"k":"fn","n":"abort_restart","l":1342},{"k":"fn","n":"room_send","l":1354},{"k":"class","n":"Handler","l":1423},{"k":"route","n":"/api/uploads/","l":1495},{"k":"route","n":"/api/agents","l":1504},{"k":"route","n":"/api/read","l":1518},{"k":"route","n":"/api/push/vapid","l":1527},{"k":"route","n":"/api/room","l":1531},{"k":"route","n":"/api/send","l":1548},{"k":"route","n":"/api/room/send","l":1555},{"k":"route","n":"/api/room/self-post","l":1572},{"k":"route","n":"/api/room/claude-stop-post","l":1586},{"k":"route","n":"/api/room/post","l":1595},{"k":"route","n":"/api/push/subscribe","l":1622},{"k":"route","n":"/api/presence","l":1634},{"k":"route","n":"/api/redeliver","l":1641},{"k":"route","n":"/api/upload","l":1650}],"calls":[{"from":"herdr_json","to":"herdr"},{"from":"parse_transcript","to":"herdr"},{"from":"parse_transcript","to":"is_chrome"},{"from":"parse_transcript","to":"is_self_post_tool_trace"},{"from":"mentioned_in","to":"herdr"},{"from":"room_post","to":"schedule_push"},{"from":"type_into","to":"herdr"},{"from":"submit_to_pane","to":"herdr"},{"from":"submit_to_pane","to":"type_into"},{"from":"subs_upsert","to":"subs_load"},{"from":"subs_upsert","to":"subs_save"},{"from":"subs_remove","to":"subs_load"},{"from":"subs_remove","to":"subs_save"},{"from":"schedule_push","to":"push_label"},{"from":"schedule_push","to":"_flush_push"},{"from":"_flush_push","to":"_send_pushes"},{"from":"_send_pushes","to":"device_active"},{"from":"_send_pushes","to":"subs_load"},{"from":"_send_pushes","to":"subs_remove"},{"from":"journal_open","to":"_journal_write"},{"from":"journal_update","to":"_journal_write"},{"from":"journal_done","to":"journal_update"},{"from":"journal_claim_send","to":"_journal_write"},{"from":"journal_claim_send","to":"_journal_fold"},{"from":"self_post_succeeded","to":"journal_get"},{"from":"wait_for_self_post","to":"self_post_succeeded"},{"from":"wait_for_self_post","to":"journal_get"},{"from":"wait_for_self_post","to":"wait_status"},{"from":"accept_self_post","to":"mentioned_in"},{"from":"accept_self_post","to":"room_cfg"},{"from":"accept_self_post","to":"room_post"},{"from":"accept_self_post","to":"journal_done"},{"from":"accept_self_post","to":"journal_get"},{"from":"accept_self_post","to":"inject"},{"from":"_finish_self_post_commit","to":"journal_update"},{"from":"_finish_self_post_commit","to":"accept_self_post"},{"from":"_finish_self_post_commit","to":"journal_get"},{"from":"_finish_self_post_commit","to":"wait_idle_watching"},{"from":"_finish_self_post_commit","to":"read_reply"},{"from":"reserve_self_post","to":"journal_update"},{"from":"reserve_self_post","to":"_finish_self_post_commit"},{"from":"reserve_self_post","to":"journal_get"},{"from":"journal_get","to":"_journal_fold"},{"from":"journal_load_and_compact","to":"_journal_fold"},{"from":"recover_deliveries","to":"herdr"},{"from":"recover_deliveries","to":"room_post"},{"from":"recover_deliveries","to":"journal_update"},{"from":"recover_deliveries","to":"_finish_self_post_commit"},{"from":"recover_deliveries","to":"_recover_one"},{"from":"_recover_one","to":"herdr"},{"from":"_recover_one","to":"room_post"},{"from":"_recover_one","to":"journal_update"},{"from":"_recover_one","to":"journal_done"},{"from":"_recover_one","to":"pane_probe_state"},{"from":"_recover_one","to":"capture_reply"},{"from":"_recover_one","to":"inject"},{"from":"wait_status","to":"herdr"},{"from":"wait_idle_watching","to":"herdr"},{"from":"wait_idle_watching","to":"room_post"},{"from":"wait_idle_watching","to":"wait_status"},{"from":"read_reply","to":"herdr"},{"from":"read_reply","to":"clean_agent_reply"},{"from":"read_reply","to":"parse_transcript"},{"from":"pane_probe_state","to":"herdr"},{"from":"capture_reply","to":"wait_status"},{"from":"capture_reply","to":"wait_idle_watching"},{"from":"capture_reply","to":"read_reply"},{"from":"retry_capture","to":"wait_status"},{"from":"retry_capture","to":"wait_idle_watching"},{"from":"retry_capture","to":"read_reply"},{"from":"inject","to":"mentioned_in"},{"from":"inject","to":"room_cfg"},{"from":"inject","to":"room_post"},{"from":"inject","to":"submit_to_pane"},{"from":"inject","to":"journal_open"},{"from":"inject","to":"journal_update"},{"from":"inject","to":"journal_done"},{"from":"inject","to":"journal_claim_send"},{"from":"inject","to":"wait_for_self_post"},{"from":"inject","to":"journal_get"},{"from":"inject","to":"wait_status"},{"from":"inject","to":"pane_probe_state"},{"from":"inject","to":"capture_reply"},{"from":"inject","to":"retry_capture"},{"from":"spawn_worker","to":"_spawn_worker"},{"from":"_spawn_worker","to":"herdr"},{"from":"_spawn_worker","to":"herdr_json"},{"from":"_spawn_worker","to":"room_cfg"},{"from":"_spawn_worker","to":"room_post"},{"from":"_spawn_worker","to":"submit_to_pane"},{"from":"_spawn_worker","to":"journal_open"},{"from":"_spawn_worker","to":"journal_update"},{"from":"_spawn_worker","to":"journal_done"},{"from":"_spawn_worker","to":"journal_claim_send"},{"from":"_spawn_worker","to":"wait_status"},{"from":"_spawn_worker","to":"capture_reply"},{"from":"_spawn_worker","to":"retry_capture"},{"from":"_persist_restart","to":"_atomic_json"},{"from":"_persist_restart","to":"_restart_path"},{"from":"_unfinished","to":"_journal_fold"},{"from":"_request_handoff","to":"submit_to_pane"},{"from":"_request_handoff","to":"read_reply"},{"from":"_request_handoff","to":"capture_reply"},{"from":"_request_handoff","to":"_parse_handoff"},{"from":"_make_handoff","to":"_unfinished"},{"from":"restart_preflight","to":"restart_config"},{"from":"begin_restart","to":"room_cfg"},{"from":"begin_restart","to":"room_post"},{"from":"begin_restart","to":"_persist_restart"},{"from":"begin_restart","to":"restart_preflight"},{"from":"begin_restart","to":"_finish_restart_drain"},{"from":"_finish_restart_drain","to":"room_post"},{"from":"_finish_restart_drain","to":"_persist_restart"},{"from":"_finish_restart_drain","to":"_make_handoff"},{"from":"build_boot_packet","to":"restart_config"},{"from":"build_boot_packet","to":"_read_text"},{"from":"_start_declared","to":"herdr"},{"from":"_start_declared","to":"herdr_json"},{"from":"_capture_restart_ack","to":"herdr"},{"from":"_capture_restart_ack","to":"wait_status"},{"from":"_capture_restart_ack","to":"wait_idle_watching"},{"from":"_capture_restart_ack","to":"_parse_restart_ack"},{"from":"validate_restart_ack","to":"journal_get"},{"from":"validate_restart_ack","to":"restart_config"},{"from":"confirm_restart","to":"herdr"},{"from":"confirm_restart","to":"room_cfg"},{"from":"confirm_restart","to":"room_post"},{"from":"confirm_restart","to":"submit_to_pane"},{"from":"confirm_restart","to":"wait_status"},{"from":"confirm_restart","to":"_atomic_json"},{"from":"confirm_restart","to":"restart_config"},{"from":"confirm_restart","to":"_persist_restart"},{"from":"confirm_restart","to":"build_boot_packet"},{"from":"confirm_restart","to":"_start_declared"},{"from":"confirm_restart","to":"_capture_restart_ack"},{"from":"confirm_restart","to":"validate_restart_ack"},{"from":"confirm_restart","to":"resume_held"},{"from":"hold_delivery","to":"room_cfg"},{"from":"hold_delivery","to":"journal_open"},{"from":"hold_delivery","to":"journal_update"},{"from":"hold_delivery","to":"_persist_restart"},{"from":"resume_held","to":"room_cfg"},{"from":"resume_held","to":"journal_done"},{"from":"resume_held","to":"journal_get"},{"from":"resume_held","to":"inject"},{"from":"resume_held","to":"spawn_worker"},{"from":"resume_held","to":"_persist_restart"},{"from":"abort_restart","to":"room_post"},{"from":"abort_restart","to":"_persist_restart"},{"from":"abort_restart","to":"resume_held"},{"from":"room_send","to":"mentioned_in"},{"from":"room_send","to":"room_cfg"},{"from":"room_send","to":"room_post"},{"from":"room_send","to":"inject"},{"from":"room_send","to":"spawn_worker"},{"from":"room_send","to":"begin_restart"},{"from":"room_send","to":"confirm_restart"},{"from":"room_send","to":"hold_delivery"},{"from":"room_send","to":"abort_restart"},{"from":"Handler","to":"herdr"},{"from":"Handler","to":"herdr_json"},{"from":"Handler","to":"parse_transcript"},{"from":"Handler","to":"page_ver"},{"from":"Handler","to":"mentioned_in"},{"from":"Handler","to":"room_cfg"},{"from":"Handler","to":"room_post"},{"from":"Handler","to":"init_vapid"},{"from":"Handler","to":"subs_upsert"},{"from":"Handler","to":"subs_remove"},{"from":"Handler","to":"accept_self_post"},{"from":"Handler","to":"reserve_self_post"},{"from":"Handler","to":"journal_get"},{"from":"Handler","to":"journal_load_and_compact"},{"from":"Handler","to":"recover_deliveries"},{"from":"Handler","to":"_recover_one"},{"from":"Handler","to":"inject"},{"from":"Handler","to":"_restart_path"},{"from":"Handler","to":"hold_delivery"},{"from":"Handler","to":"room_send"}],"ext":[]},{"id":"sw.js","kind":"module","district":"(root)","loc":29,"fanIn":0,"deps":[],"syms":[],"calls":[],"ext":[]},{"id":"test_restart.py","kind":"module","district":"(root)","loc":201,"fanIn":0,"deps":["server.py"],"syms":[{"k":"class","n":"RestartProtocolTest","l":12}],"calls":[],"ext":[{"from":"RestartProtocolTest","file":"server.py","name":"server"}]},{"id":"test_self_post.py","kind":"module","district":"(root)","loc":383,"fanIn":0,"deps":["server.py"],"syms":[{"k":"class","n":"ResidentSelfPostTest","l":13}],"calls":[],"ext":[{"from":"ResidentSelfPostTest","file":"server.py","name":"server"}]},{"id":"test_stop_hook.py","kind":"module","district":"(root)","loc":76,"fanIn":0,"deps":[],"syms":[{"k":"fn","n":"row","l":13},{"k":"class","n":"ClaudeStopHookTest","l":17}],"calls":[{"from":"ClaudeStopHookTest","to":"row"}],"ext":[]}];
+  var NOTES={"server.py":{"herdr":"herdr CLI実行ラッパー。全pane操作の唯一の出口","herdr_json":"herdr CLI出力からJSON行を取り出す","is_chrome":"TUIの装飾行（罫線・ステータスバー等）を判定して会話解析から除外","is_self_post_tool_trace":"エージェントが自己投稿ツールを実行した痕跡か判定","clean_agent_reply":"エージェント返信から自己投稿ヘルパーの実行トレースだけ除去","parse_transcript":"TUI画面テキストを発言単位に分割する会話パーサ中核（claude/codex/genericの3書式対応）","page_ver":"モバイルUIのキャッシュ破棄用バージョン文字列","mentioned_in":"@mention判定（エージェント間中継のトリガ）","room_cfg":"room.json（参加者pane設定）を読む","room_post":"部屋への発言追加。重複折りたたみ・ログ追記・push予約まで担う書き込み中核","type_into":"paneへ300字ずつ分割送信（長文ワンショットの欠落対策）+ Enter","submit_to_pane":"Claude系はagent send経由、それ以外はtype_intoでpaneへ投函","device_active":"端末がフォアグラウンドか判定（push抑制用。明示hidden信号を優先）","init_vapid":"Web Push用VAPID鍵の初期化（なければ生成）","subs_load":"購読端末一覧を読み込む","subs_save":"購読端末一覧を保存","subs_upsert":"端末の購読を登録/更新","subs_remove":"端末の購読を削除","push_label":"push通知の表示文言を作る","schedule_push":"デバウンス窓（12秒）で返信を束ねてpush予約","_flush_push":"デバウンス満了時に実際のpushを発火","_send_pushes":"全購読端末へWeb Push送信。foreground端末はスキップ","_journal_write":"配信ジャーナルの低レベル書き込み","journal_open":"配信試行をジャーナルに記録（冪等キー発番）","journal_update":"ジャーナル状態遷移（pending→delivered→…）","journal_done":"配信完了として閉じる","journal_claim_send":"送信権の獲得（二重送信防止の排他制御）","self_post_succeeded":"エージェント自身の自己投稿が成功したか確認","wait_for_self_post":"自己投稿の到着を待つ","accept_self_post":"エージェントからの自己投稿を受諾し部屋に載せる","_finish_self_post_commit":"自己投稿の確定処理","reserve_self_post":"自己投稿の先受け予約（重複防止キー発行）","_journal_fold":"古いジャーナルエントリを圧縮","journal_get":"jidでジャーナルエントリ取得","journal_load_and_compact":"起動時のジャーナル復元＋圧縮","recover_deliveries":"クラッシュ後に未完了配信を復旧","_recover_one":"1件の未完了配信を復旧処理","wait_status":"paneのエージェント状態がidle等になるまで待つ","wait_idle_watching":"idle待ち中に承認ダイアログ停止を検出して部屋に報告","read_reply":"paneを即時パースし、相関マーカー以降のエージェント返信を抽出","pane_probe_state":"マーカーが今pane上に存在するか確認（再送判断用）","capture_reply":"投函後、返信を捕捉する一連処理","retry_capture":"返信捕捉失敗時の再試行","inject":"配信パイプライン中核。busy待ち→排他獲得→投函→ジャーナル更新まで一貫処理","spawn_worker":"作業用サブエージェントpaneを起動（同時実行カウンタ管理）","_spawn_worker":"worker pane生成の本体：pane split→CLI起動→タスク投函→監視","_atomic_json":"JSONファイルのアトミック書き込み","restart_config":"restart.jsonを読む","_persist_restart":"再起動状態の永続化","_unfinished":"未完了の再起動があるか確認","_parse_handoff":"引き継ぎ応答からハンドオフ形式を解析","_request_handoff":"現住エージェントに引き継ぎを要求","_make_handoff":"引き継ぎパケット（状態引継ぎ文書）を組み立て","restart_preflight":"再起動可否の事前チェック（freeze要件確認）","begin_restart":"再起動シーケンス開始：freeze（部屋凍結）してdrainスレッド起動","_finish_restart_drain":"凍結中の残務を流しきって新エージェント起動へ","_read_text":"テキストファイル読み込みユーティリティ","build_boot_packet":"新エージェント用のブート文脈（履歴・状態）を組み立て","_start_declared":"宣言された手順で新エージェントを起動","_parse_restart_ack":"起動完了応答（ACK）を解析","_capture_restart_ack":"新エージェントからのACK待ち","validate_restart_ack":"ACK内容の検証（正しい引き継ぎか）","confirm_restart":"再起動確定：旧pane退役→新pane就役→保留配信resume","hold_delivery":"再起動中の配信を保留キューへ退避","resume_held":"保留した配信を新しいpaneへ順次放出","abort_restart":"再起動を中断し元の状態へ戻す","room_send":"HTTP受信メッセージの振り分け中核：再起動コマンド/work依頼/通常配信を判定して各処理へ"},"herdr-room-post":{"main":"エージェント側ラッパ: 自己投稿API(/api/room/self-post)を叩くCLI"},"claude-stop-room-post":{"main":"Claude Codeのstop hookから呼ばれ、返信を自動投稿するCLI"}};
+  var SYMK={route:'⚡',api:'⚡',fn:'ƒ',class:'◆',type:'τ',const:'•'};
+  // HTML文字列組み立て用のエスケープ（テンプレート内で使うためJS側にも定義）
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+  var svg=document.getElementById('city'),panel=document.getElementById('panel');
+  var vb=svg.viewBox.baseVal;
+  var HOME={x:vb.x,y:vb.y,w:vb.width,h:vb.height};
+  function apply(){svg.setAttribute('viewBox',vb.x+' '+vb.y+' '+vb.width+' '+vb.height);
+    // ズーム連動: ビルに同梱されたラベルを一括切替（座標はSVGが追従、壊れない）
+    svg.classList.toggle('zoomed-in', vb.width < HOME.w*0.55);}
+  function resetView(){vb.x=HOME.x;vb.y=HOME.y;vb.width=HOME.w;vb.height=HOME.h;apply();}
+  svg.addEventListener('wheel',function(e){e.preventDefault();
+    var f=Math.exp(e.deltaY*0.0012);
+    var r=svg.getBoundingClientRect();
+    var mx=vb.x+(e.clientX-r.left)/r.width*vb.width,my=vb.y+(e.clientY-r.top)/r.height*vb.height;
+    var nw=Math.min(4000,Math.max(60,vb.width*f));var k=nw/vb.width;
+    vb.x=mx-(mx-vb.x)*k;vb.y=my-(my-vb.y)*k;vb.width=nw;vb.height*=k;
+    apply();},{passive:false});
+  var drag=null,moved=false;
+  svg.addEventListener('pointerdown',function(e){
+    if(e.button!==0)return;
+    drag={x:e.clientX,y:e.clientY,vx:vb.x,vy:vb.y};moved=false;
+    try{svg.setPointerCapture(e.pointerId);}catch(_){}
+    svg.classList.add('grabbing');
+  });
+  svg.addEventListener('pointermove',function(e){
+    if(!drag)return;
+    var dx=e.clientX-drag.x,dy=e.clientY-drag.y;
+    if(!moved&&Math.abs(dx)<4&&Math.abs(dy)<4)return;
+    moved=true;
+    var r=svg.getBoundingClientRect();
+    vb.x=drag.vx-dx*vb.width/r.width;vb.y=drag.vy-dy*vb.height/r.height;apply();
+  });
+  function endDrag(){drag=null;svg.classList.remove('grabbing');setTimeout(function(){moved=false;},0);}
+  svg.addEventListener('pointerup',endDrag);
+  svg.addEventListener('pointercancel',endDrag);
+  svg.addEventListener('dblclick',function(e){if(e.target.closest('.b'))return;resetView();});
+  function selectBlock(g){
+    document.querySelectorAll('.b.sel').forEach(function(x){x.classList.remove('sel')});g.classList.add('sel');
+    var id=g.getAttribute('data-id');var n=NODES.find(function(x){return x.id===id});
+    // exports一覧 + 各シンボルの使用者
+    var symRows=(n.syms||[]).map(function(s){
+      var users=[];
+      NODES.forEach(function(other){
+        (other.uses||[]).forEach(function(u){
+          if(u.to===n.id&&(u.name===s.n||(u.name==='default'&&s.d)))users.push(other.id);
+        });
+      });
+      return '<div class="sym" data-sym="'+esc(s.n)+'"><i>'+(SYMK[s.k]||'·')+'</i><code>'+s.n+'</code><span>:'+s.l+'</span></div>'+
+        ((NOTES[id]||{})[s.n]||(s.d?(NOTES[id]||{})['default']:null)?'<div class="sym-note">'+esc((NOTES[id]||{})[s.n]||(NOTES[id]||{})['default'])+'</div>':'')+
+        (users.length?'<div class="users">'+users.map(function(u){return '<a class="jump" data-target="'+u.replace(/"/g,'&quot;')+'">'+u.split('/').pop()+'</a>'}).join(' · ')+' が使用</div>':'');
+    }).join('')||'<div class="sym none">exportsなし</div>';
+    var deps=n.deps.map(function(d){return '<a data-target="'+d.replace(/"/g,'&quot;')+'">'+d.split('/').pop()+'</a>'}).join(' · ')||'—';
+    var drillable=(n.syms||[]).length>0;
+    panel.innerHTML='<h2>'+id+'</h2>'+
+      '<div class="row"><span>kind</span><b>'+n.kind+'</b></div>'+
+      '<div class="row"><span>district</span><b>'+n.district+'</b></div>'+
+      '<div class="row"><span>loc</span><b>'+n.loc+'</b></div>'+
+      '<div class="row"><span>fanned into by</span><b>'+n.fanIn+'</b></div>'+
+      '<div class="sec">exports ('+((n.syms||[]).length)+')</div>'+ symRows +
+      '<div class="deps">imports: '+deps+'</div>'+
+      (drillable?'<button id="drill">⤵ 関数マップに入る</button>':'');
+    panel.style.display='block';
+    var btn=document.getElementById('drill');
+    if(btn)btn.onclick=function(){enterFile(n);};
+  }
+  // ---- 関数マップ（サブシーン）: 呼び出し関係を左→右フローで描く。パン/ズーム可 ----
+  var sub=document.getElementById('sub');
+  function enterFile(n){
+    var syms=(n.syms||[]).filter(function(s){return s.k!=='route'});
+    if(!syms.length)return;
+    var usersOf={};
+    NODES.forEach(function(other){
+      (other.uses||[]).forEach(function(u){
+        if(u.to!==n.id)return;
+        var key=u.name==='default'?'default':u.name;
+        (usersOf[key]=usersOf[key]||[]).push(other.id.split('/').pop());
+      });
+    });
+    // レイヤー割り: 呼ばれてない（=入口）を0として呼び出し先へ+1
+    var calls=n.calls||[];
+    var layer={},queue=[];
+    syms.forEach(function(s){
+      var isEntry=!calls.some(function(c){return c.to===s.n});
+      if(isEntry&&layer[s.n]===undefined){layer[s.n]=0;queue.push(s.n);}
+    });
+    while(queue.length){
+      var cur=queue.shift();
+      calls.filter(function(c){return c.from===cur}).forEach(function(c){
+        if(layer[c.to]===undefined||layer[c.to]<layer[cur]+1){layer[c.to]=(layer[cur]??0)+1;queue.push(c.to);}
+      });
+    }
+    syms.forEach(function(s){if(layer[s.n]===undefined)layer[s.n]=0;});
+    var byL={};
+    syms.forEach(function(s){(byL[layer[s.n]]=byL[layer[s.n]]||[]).push(s)});
+    var COLW=200,ROWH=52,PAD=50;
+    var posF={};
+    Object.keys(byL).sort((a,b)=>a-b).forEach(function(L){
+      var arr=byL[L];
+      arr.forEach(function(s,i){
+        posF[s.n]={x:PAD+(+L)*COLW, y:(i-(arr.length-1)/2)*ROWH};
+      });
+    });
+    // エッジ: ファイル内呼び出し
+    var inner='<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#8a7f60"/></marker>'+
+      '<marker id="arrow-x" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#d96c47"/></marker></defs>';
+    calls.forEach(function(c){
+      var a=posF[c.from],b=posF[c.to];if(!a||!b)return;
+      var x1=a.x+72,x2=b.x-76,y1=a.y,y2=b.y,mx=(x1+x2)/2;
+      inner+='<path class="fedge" d="M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2+'"/>';
+    });
+    // 外部呼び出し: 右側に小さいターゲットノード
+    var extNodes={},extList=n.ext||[],exX=PAD+(Math.max(...Object.keys(byL).map(Number))+1)*COLW-40;
+    extList.slice(0,24).forEach(function(e,i){
+      var key=e.file+'#'+e.name;
+      if(!extNodes[key]){
+        var fromPos=posF[e.from];
+        extNodes[key]={x:exX, y:Object.keys(extNodes).length*46 - (Math.min(extList.length,24)-1)*23, file:e.file, name:e.name};
+      }
+      var a=posF[e.from],b=extNodes[key];if(!a)return;
+      inner+='<path class="fedge ext" d="M'+(a.x+72)+','+a.y+' C'+((a.x+b.x)/2)+','+a.y+' '+((a.x+b.x)/2)+','+b.y+' '+(b.x-66)+','+b.y+'" marker-end="url(#arrow-x)" data-file="'+esc(e.file)+'" data-name="'+esc(e.name)+'"/>';
+    });
+    Object.values(extNodes).forEach(function(p,i){
+      var fname=p.file.split('/').pop().replace(/.w+$/,'');
+      inner+='<g class="fx" data-file="'+esc(p.file)+'" data-name="'+esc(p.name)+'">'+
+        '<rect x="'+(p.x-64)+'" y="'+(p.y-13)+'" width="128" height="26" rx="13" fill="#faf6ea" stroke="#d96c47" stroke-width="1.4" stroke-dasharray="4 3"/>'+
+        '<text x="'+p.x+'" y="'+(p.y+4)+'" text-anchor="middle" font-size="10.5" fill="#a05a35">'+esc(fname+'·'+(p.name==='default'?'default':p.name))+'</text></g>';
+    });
+    // 関数ノード（注釈は右上の説明欄に出す。ノードはコンパクト維持）
+    syms.forEach(function(s){
+      var p=posF[s.n];
+      var u=(s.d?(usersOf['default']||[]):(usersOf[s.n]||[])||[]).length;
+      var color=SYMC[s.k]||'#b0a486';
+      var note=(NOTES[n.id]||{})[s.n]||(s.d?(NOTES[n.id]||{})['default']:null)||'';
+      inner+='<g class="fb'+(note?' has-note':'')+'" data-sym="'+esc(s.n)+'" data-line="'+s.l+'" data-note="'+esc(note)+'">'+
+        '<rect class="fbrect" x="'+(p.x-70)+'" y="'+(p.y-16)+'" width="140" height="32" rx="7" fill="'+color+'" stroke="#14120b" stroke-width="1.1"/>'+
+        (note?'<circle class="notedot" cx="'+(p.x+60)+'" cy="'+(p.y-6)+'" r="4"></circle>':'')+
+        '<text class="flabel2" x="'+p.x+'" y="'+(p.y-2)+'">'+esc(s.n)+'</text>'+
+        '<text class="fsub" x="'+p.x+'" y="'+(p.y+11)+'">:'+s.l+(u?' · '+u+' users':'')+'</text>'+
+        '</g>';
+    });
+    var maxLayer=Math.max(...Object.keys(byL).map(Number));
+    var vbW=(maxLayer+2.6)*COLW, vbH=Math.max(syms.length*ROWH*1.4,(extList.length?Math.min(extList.length,24):1)*46+120,320);
+    sub.innerHTML='<div class="subhead"><b>'+esc(n.id.split('/').pop())+'</b> 関数マップ — 左から右へ呼び出しが流れる · 破線＝他ファイルの関数 <button id="flow-close" style="float:right">× 閉じる (ESC)</button></div>'+
+      '<svg id="subsvg" viewBox="'+(-vbW/2)+' '+(-vbH/2)+' '+vbW+' '+vbH+'" preserveAspectRatio="xMidYMid meet">'+
+      '<g id="subscene">'+inner+'</g></svg>'+
+      '<div id="notebox"><div class="nb-title">説明</div><div class="nb-body" id="notebody">関数にカーソルを合わせると役割の説明が出ます</div></div>';
+    sub.style.display='flex';
+    attachPanZoom(document.getElementById('subsvg'));
+    document.getElementById('flow-close').onclick=function(){sub.style.display='none';};
+    // ホバー/クリックで右上説明欄を更新
+    var notebody=document.getElementById('notebody');
+    sub.querySelectorAll('.fb').forEach(function(el){
+      el.addEventListener('mouseenter',function(){
+        var note=el.getAttribute('data-note')||'（注釈なし）';
+        notebody.textContent=el.getAttribute('data-sym')+' — '+note;
+      });
+      el.onclick=function(){highlightUsers(n,el.getAttribute('data-sym'));};
+    });
+    sub.querySelectorAll('.fx,.fedge.ext').forEach(function(el){
+      el.style.cursor='pointer';
+      el.onclick=function(){
+        var f=el.getAttribute('data-file');
+        sub.style.display='none';document.getElementById('subinfo').style.display='none';
+        focusBlock(f,false);
+      };
+    });
+  }
+  // サブシーン用パン/ズーム
+  function attachPanZoom(svg){
+    svg.classList.add('panzoom');
+    var vb=svg.viewBox.baseVal;
+    var HOME={w:vb.width,h:vb.height};
+    svg.addEventListener('wheel',function(e){
+      e.preventDefault();
+      var f=Math.exp(e.deltaY*0.0012);
+      var r=svg.getBoundingClientRect();
+      var mx=vb.x+(e.clientX-r.left)/r.width*vb.width,my=vb.y+(e.clientY-r.top)/r.height*vb.height;
+      var nw=Math.min(HOME.w*1.5,Math.max(200,vb.width*f));var k=nw/vb.width;
+      vb.x=mx-(mx-vb.x)*k;vb.y=my-(my-vb.y)*k;vb.width=nw;vb.height*=k;
+    },{passive:false});
+    var drag=null;
+    svg.addEventListener('pointerdown',function(e){
+      drag={x:e.clientX,y:e.clientY,vx:vb.x,vy:vb.y};
+      try{svg.setPointerCapture(e.pointerId);}catch(_){}
+      svg.classList.add('grabbing');
+    });
+    svg.addEventListener('pointermove',function(e){
+      if(!drag)return;
+      var r=svg.getBoundingClientRect();
+      vb.x=drag.vx-(e.clientX-drag.x)*vb.width/r.width;
+      vb.y=drag.vy-(e.clientY-drag.y)*vb.height/r.height;
+    });
+    function end(){drag=null;svg.classList.remove('grabbing');}
+    svg.addEventListener('pointerup',end);
+    svg.addEventListener('pointercancel',end);
+  }
+  function shade2(hex,amt){
+    var nn=parseInt(hex.slice(1),16);
+    var r=Math.min(255,Math.max(0,(nn>>16)+amt)),g=Math.min(255,Math.max(0,((nn>>8)&255)+amt)),b=Math.min(255,Math.max(0,(nn&255)+amt));
+    return '#'+((r<<16)|(g<<8)|b).toString(16).padStart(6,'0');
+  }
+  var SYMC={route:'#e07a3f',api:'#e07a3f',fn:'#5aa9d6',class:'#9b7fd4',type:'#8a8a8a',const:'#7fb069'};
+  var KINDC={page:'#e0b34c',component:'#7fb069',api:'#d96c47',hook:'#5aa9d6',lib:'#9b7fd4',type:'#8a8a8a',test:'#5f7d5f',module:'#b0a486'};
+  function highlightUsers(n,name){
+    // 対象シンボルを使ってるファイルのビルを光らせる
+    document.querySelectorAll('.b.lit').forEach(function(x){x.classList.remove('lit')});
+    var lit=[];
+    NODES.forEach(function(other){
+      (other.uses||[]).forEach(function(u){
+        if(u.to===n.id&&(u.name===name||(name==='default'&&u.name==='default')))lit.push(other.id);
+      });
+    });
+    lit.forEach(function(id){
+      var g=document.querySelector('.b[data-id="'+CSS.escape(id)+'"]');
+      if(g)g.classList.add('lit');
+    });
+    // サブパネルに使用者一覧を出す
+    var box=document.getElementById('subinfo');
+    box.innerHTML=name==='default'?'<b>default export</b> の使用者':
+      '<b>'+esc(name)+'</b> の使用者: '+(lit.map(function(id){return '<a class="jump" data-target="'+id.replace(/"/g,'&quot;')+'">'+id.split('/').pop()+'</a>'}).join(' · ')||'なし');
+    box.style.display='block';
+  }
+  // pointerCapture中はclickのtargetがsvgに化けるため、elementFromPointで実体を解決する
+  svg.addEventListener('click',function(e){
+    if(moved)return;
+    var el=document.elementFromPoint(e.clientX,e.clientY);
+    var g=el&&el.closest?el.closest('.b'):null;
+    if(!g){panel.style.display='none';return;}
+    selectBlock(g);
+  });
+  panel.addEventListener('click',function(e){
+    var t=e.target.closest('a[data-target]');if(!t)return;
+    var g=document.querySelector('.b[data-id="'+CSS.escape(t.getAttribute('data-target'))+'"]');
+    if(g){selectBlock(g);}
+  });
+  // ESCでサブシーンを閉じる / ハイライト解除
+  window.addEventListener('keydown',function(e){
+    if(e.key!=='Escape')return;
+    if(sub.style.display==='flex'){sub.style.display='none';document.getElementById('subinfo').style.display='none';setFlowButton(false);}
+    else{document.querySelectorAll('.b.lit').forEach(function(x){x.classList.remove('lit')});}
+  });
+  // subinfo内の「使用者」リンクでメイン地図のそのビルへ戻る
+  document.getElementById('subinfo').addEventListener('click',function(e){
+    var t=e.target.closest('a.jump');if(!t)return;
+    sub.style.display='none';this.style.display='none';
+    document.querySelectorAll('.b.lit').forEach(function(x){x.classList.remove('lit')});
+    var g=document.querySelector('.b[data-id="'+CSS.escape(t.getAttribute('data-target'))+'"]');
+    if(g){selectBlock(g);}
+  });
+  // ---- ライブ検索: ファイル名で絞り込み→ジャンプ＋関係ハイライト（emerge方式） ----
+  var qInput=document.getElementById('q'),results=document.getElementById('results');
+  function focusBlock(id,alsoNeighbors){
+    var g=document.querySelector('.b[data-id="'+CSS.escape(id)+'"]');
+    if(!g)return;
+    // カメラをそのビルに寄せる
+    var bb=g.querySelector('polygon').getBBox();
+    vb.width=Math.min(HOME.w,vb.width<HOME.w?vb.width:600);vb.height=vb.width*(HOME.h/HOME.w);
+    vb.x=bb.x+bb.width/2-vb.width/2;vb.y=bb.y+bb.height/2-vb.height/2;
+    apply();
+    selectBlock(g);
+    if(alsoNeighbors){highlightRelations(id);}
+  }
+  function highlightRelations(id){
+    document.querySelectorAll('.b.lit,.b.dim').forEach(function(x){x.classList.remove('lit','dim')});
+    var n=NODES.find(function(x){return x.id===id});
+    var rel={};
+    (n.deps||[]).forEach(function(d){rel[d]=1});
+    NODES.forEach(function(other){(other.deps||[]).forEach(function(d){if(d===id)rel[other.id]=1})});
+    NODES.forEach(function(other){
+      if(other.id!==id&&!rel[other.id]){
+        var g=document.querySelector('.b[data-id="'+CSS.escape(other.id)+'"]');
+        if(g)g.classList.add('dim');
+      }
+    });
+    document.querySelectorAll('#scene .edge').forEach(function(p){p.remove()});
+  }
+  function clearDim(){document.querySelectorAll('.b.dim').forEach(function(x){x.classList.remove('dim')});}
+  var selIdx=-1;
+  function renderResults(list){
+    if(!list.length){results.style.display='none';return;}
+    results.innerHTML=list.slice(0,12).map(function(n,i){
+      return '<div class="r'+(i===selIdx?' on':'')+'" data-id="'+n.id.replace(/"/g,'&quot;')+'"><span>'+esc(n.id.split('/').pop())+'</span><small>'+esc(n.district)+'</small></div>';
+    }).join('');
+    results.style.display='block';
+  }
+  qInput.addEventListener('input',function(){selIdx=-1;
+    var v=qInput.value.toLowerCase();
+    renderResults(v?NODES.filter(function(n){return n.id.toLowerCase().indexOf(v)>=0}):[]);
+  });
+  qInput.addEventListener('keydown',function(e){
+    var list=NODES.filter(function(n){return n.id.toLowerCase().indexOf(qInput.value.toLowerCase())>=0}).slice(0,12);
+    if(e.key==='ArrowDown'){selIdx=Math.min(selIdx+1,list.length-1);renderResults(list);e.preventDefault();}
+    else if(e.key==='ArrowUp'){selIdx=Math.max(selIdx-1,0);renderResults(list);e.preventDefault();}
+    else if(e.key==='Enter'){var pick=list[Math.max(selIdx,0)];if(pick){qInput.value='';results.style.display='none';focusBlock(pick.id,true);} }
+    else if(e.key==='Escape'){qInput.value='';results.style.display='none';clearDim();}
+  });
+  results.addEventListener('click',function(e){
+    var r=e.target.closest('.r');if(!r)return;
+    qInput.value='';results.style.display='none';
+    focusBlock(r.getAttribute('data-id'),true);
+  });
+  window.addEventListener('keydown',function(e){
+    if(e.key==='/'&&document.activeElement!==qInput&&sub.style.display!=='flex'){e.preventDefault();qInput.focus();}
+  });
+  // ---- フロービュー: 呼び出し関係を左→右の有向フロー（サブシーン上に描く） ----
+  document.getElementById('mode-flow').addEventListener('click',function(){
+    if(sub.style.display==='flex'){sub.style.display='none';setFlowButton(false);document.getElementById('subinfo').style.display='none';}
+    else{openFlow();}
+  });
+  function setFlowButton(open){
+    var b=document.getElementById('mode-flow');
+    b.textContent=open?'⬡ マップに戻る':'⇢ フローで見る';
+    b.setAttribute('aria-pressed',open?'true':'false');
+  }
+  function entryPoints(){
+    // エントリ: page/route/api種別。無ければfan-in最大
+    var eps=NODES.filter(function(n){return n.kind==='page'||n.kind==='api'});
+    if(!eps.length){
+      var best=NODES.slice().sort(function(a,b){return b.fanIn-a.fanIn})[0];
+      eps=best?[best]:[];
+    }
+    return eps;
+  }
+  function flowLayers(){
+    // BFSでエントリから層（depth）を割る
+    var depth={},queue=[];
+    entryPoints().forEach(function(n){depth[n.id]=0;queue.push(n.id);});
+    while(queue.length){
+      var cur=queue.shift(),d=depth[cur];
+      var node=NODES.find(function(x){return x.id===cur});
+      (node?node.deps:[]).forEach(function(t){
+        if(depth[t]===undefined||depth[t]<d+1){depth[t]=Math.max(depth[t]??0,d+1);queue.push(t);}
+      });
+    }
+    return depth;
+  }
+  function openFlow(){
+    var depth=flowLayers();
+    var shown=NODES.filter(function(n){return depth[n.id]!==undefined});
+    if(!shown.length)return;
+    var maxLayer=Math.max.apply(null,shown.map(function(n){return depth[n.id]}));
+    // レイヤー内は縦に並べる
+    var byLayer={};
+    shown.forEach(function(n){(byLayer[depth[n.id]]=byLayer[depth[n.id]]||[]).push(n)});
+    var COLW=170,ROWH=46,PAD=40;
+    var posF={};
+    Object.keys(byLayer).forEach(function(L){
+      var arr=byLayer[L].slice().sort(function(a,b){return b.fanIn-a.fanIn});
+      var totalH=(arr.length-1)*ROWH;
+      arr.forEach(function(n,i){
+        posF[n.id]={x:PAD+(+L)*COLW, y:PAD+i*ROWH-totalH/2};
+      });
+    });
+    // SVG組み立て
+    var inner='';
+    // エッジ（呼び出し方向: from→to）
+    NODES.forEach(function(n){
+      (n.deps||[]).forEach(function(t){
+        var a=posF[n.id],b=posF[t];if(!a||!b)return;
+        var x1=a.x+62,x2=b.x-8,y1=a.y,y2=b.y;
+        var mx=(x1+x2)/2;
+        inner+='<path class="fedge" d="M'+x1+','+y1+' C'+mx+','+y1+' '+mx+','+y2+' '+x2+','+y2+'"/>';
+      });
+    });
+    // ノード（丸角矩形）
+    shown.forEach(function(n){
+      var p=posF[n.id];
+      var color=KINDC[n.kind]||'#b0a486';
+      var label=n.id.split('/').pop();
+      inner+='<g class="fnode" data-id="'+esc(n.id)+'">'+
+        '<rect x="'+(p.x-70)+'" y="'+(p.y-14)+'" width="140" height="28" rx="6" fill="'+color+'" stroke="#14120b" stroke-width="1"/>'+
+        '<text x="'+p.x+'" y="'+(p.y+4)+'" text-anchor="middle" font-size="11" fill="#14120b" font-weight="600">'+esc(label)+'</text>'+
+        '</g>';
+    });
+    // コンテンツの実bboxからviewBoxを組む（センタリングを正確に）
+    var xs=Object.values(posF).map(function(p){return p.x});
+    var ys=Object.values(posF).map(function(p){return p.y});
+    var cx=(Math.min(...xs)+Math.max(...xs))/2;
+    var cy=(Math.min(...ys)+Math.max(...ys))/2;
+    var vbW=Math.max(...xs)-Math.min(...xs)+70*2+PAD*2;
+    var vbH=Math.max(Math.max(...ys)-Math.min(...ys)+28*2+80,320);
+    sub.innerHTML='<div class="subhead">⇢ フロー — 呼び出しの流れ（左＝入口 → 右＝末端）· ドラッグで移動 <button id="flow-close" style="float:right">× 閉じる (ESC)</button></div>'+
+      '<svg id="subsvg" viewBox="'+(cx-vbW/2).toFixed(0)+' '+(cy-vbH/2).toFixed(0)+' '+vbW.toFixed(0)+' '+vbH.toFixed(0)+'">'+
+      '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#7a7052"/></marker></defs>'+
+      inner+'</svg>';
+    sub.style.display='flex';
+    attachPanZoom(document.getElementById('subsvg'));
+    setFlowButton(true);
+    document.getElementById('flow-close').onclick=function(){sub.style.display='none';setFlowButton(false);};
+    // ノードクリック→そのファイルの詳細へ
+    sub.querySelectorAll('.fnode').forEach(function(el){
+      el.onclick=function(){
+        sub.style.display='none';
+        setFlowButton(false);
+        focusBlock(el.getAttribute('data-id'),false);
+      };
+    });
+  }
+})();
+ </script><script>new EventSource('/events').addEventListener('reload',()=>location.reload());</script></body></html>
