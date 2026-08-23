@@ -15,6 +15,10 @@ let ANNOTATIONS = {};
 const ANN_FILE = process.env.ANNOTATIONS ?? 'annotations.json';
 try { ANNOTATIONS = JSON.parse(fs.readFileSync(ANN_FILE, 'utf8')); } catch { /* なしでも動く */ }
 
+// タイムライン（timeline-<repo>.json or TIMELINE env）: あればタイムバーを出す
+let TIMELINE = null;
+try { TIMELINE = JSON.parse(fs.readFileSync(process.env.TIMELINE ?? `timeline-${path.basename(repo)}.json`, 'utf8')); } catch { /* なしでも動く */ }
+
 const OUT_HTML = 'dist/live.html';
 let clients = new Set();
 let rebuildTimer = null;
@@ -25,7 +29,7 @@ function rebuild(reason) {
     const city = extract(repo);
     fs.mkdirSync('dist', { recursive: true });
     // renderにlive注入フラグを渡すため一時的にscriptを足す
-    const r = renderLive(city, OUT_HTML, ANNOTATIONS);
+    const r = renderLive(city, OUT_HTML, ANNOTATIONS, TIMELINE);
     console.log(`[${new Date().toLocaleTimeString('ja-JP')}] rebuilt (${reason}): ${city.stats.files} files, ${city.stats.edges} edges — extract+render ${Math.round(performance.now() - t0)}ms`);
     for (const res of clients) res.write(`data: reload\n\n`);
   } catch (err) {
@@ -34,8 +38,8 @@ function rebuild(reason) {
   }
 }
 
-function renderLive(city, out, annotations) {
-  const r = render(city, { out, annotations });
+function renderLive(city, out, annotations, timeline) {
+  const r = render(city, { out, annotations, timeline });
   // リロード用scriptを</body>直前に挿入
   const html = fs.readFileSync(out, 'utf8').replace('</body>',
     `<script>new EventSource('/events').addEventListener('reload',()=>location.reload());</script></body>`);

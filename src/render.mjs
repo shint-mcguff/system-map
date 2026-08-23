@@ -200,6 +200,13 @@ svg.zoomed-in .flabel{display:block}
 #subinfo a{color:var(--accent);cursor:pointer;text-decoration:none}
 .b.lit polygon{stroke:#fff200;stroke-width:2.5;filter:brightness(1.25)}
 .b.dim polygon{opacity:.18}
+.b.not-born{opacity:0;pointer-events:none;transition:opacity .3s}
+.b.born{transition:opacity .3s}
+#timebar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:10px;align-items:center;background:var(--card);border:2px solid var(--ink);padding:8px 14px;z-index:4;box-shadow:4px 4px 0 rgba(20,18,11,.12);max-width:calc(100% - 40px)}
+#tb-play{width:34px;height:30px;border:1.5px solid var(--ink);background:var(--accent);color:#fff;cursor:pointer;font-size:13px}
+#tb-now{height:30px;border:1.5px solid var(--ink);background:var(--card);cursor:pointer;font:11px inherit;padding:0 10px;color:var(--ink)}
+#tb-range{width:min(420px,42vw);accent-color:var(--accent)}
+#tb-label{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:280px}
 @media(max-width:720px){#panel{width:calc(100% - 24px)}}
 </style></head><body>
 <header>
@@ -223,11 +230,13 @@ svg.zoomed-in .flabel{display:block}
 <div id="panel"></div>
 <div id="sub"></div>
 <div id="subinfo"></div>
+${opts.timeline ? `<div id="timebar"><button id="tb-play">▶︎</button><input type="range" id="tb-range" min="0" value="0"><span id="tb-label"></span><button id="tb-now">現在</button></div>` : ''}
 </div>
 <script>
 (function(){
   var NODES=${JSON.stringify(nodes.map(n=>({id:n.id,kind:n.kind,district:n.district,loc:n.loc,fanIn:n.fanIn,deps:n.deps,syms:n.syms,uses:n.uses,calls:n.calls,ext:n.ext})))};
   var NOTES=${JSON.stringify(opts.annotations ?? {})};
+  var TIMELINE=${JSON.stringify(opts.timeline ?? null)};
   var SYMK={route:'⚡',api:'⚡',fn:'ƒ',class:'◆',type:'τ',const:'•'};
   // HTML文字列組み立て用のエスケープ（テンプレート内で使うためJS側にも定義）
   function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -532,6 +541,66 @@ svg.zoomed-in .flabel{display:block}
   window.addEventListener('keydown',function(e){
     if(e.key==='/'&&document.activeElement!==qInput&&sub.style.display!=='flex'){e.preventDefault();qInput.focus();}
   });
+  // ---- タイムバー: git履歴で街の発展を再生 ----
+  if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
+    var tb=document.getElementById('timebar'),range=document.getElementById('tb-range'),
+        label=document.getElementById('tb-label'),playBtn=document.getElementById('tb-play');
+    range.max=TIMELINE.frames.length-1;
+    var byIdAll={}; NODES.forEach(function(n){byIdAll[n.id]=n;});
+    var playTimer=null;
+    function applyFrame(i){
+      if(i<0){ // -1 = 現在（gitに載ってないファイルも含め全ビル表示）
+        label.textContent='現在 — '+NODES.length+'files';
+        NODES.forEach(function(n){
+          var g=document.querySelector('.b[data-id="'+CSS.escape(n.id)+'"]');
+          if(!g)return;
+          g.classList.remove('not-born');g.classList.add('born');
+          g.style.opacity='';
+        });
+        range.value=TIMELINE.frames.length-1;
+        return;
+      }
+      var f=TIMELINE.frames[i];
+      label.textContent=f.date+' '+f.hash+' · '+f.msg.slice(0,28)+' ('+f.nFiles+'files/'+f.totalLoc+'loc)';
+      NODES.forEach(function(n){
+        var g=document.querySelector('.b[data-id="'+CSS.escape(n.id)+'"]');
+        if(!g)return;
+        var loc=f.files[n.id];
+        if(loc!==undefined){
+          // 当時存在: 現在の高さに対するLOC比率で縮める
+          var ratio=Math.min(1,loc/Math.max(n.loc,1));
+          g.style.opacity='1';g.style.display='';
+          g.querySelectorAll('polygon').forEach(function(p){
+            if(!p.dataset.h)p.dataset.h=p.getAttribute('points');
+            p.style.transition='none';
+          });
+          g.setAttribute('data-scale',ratio.toFixed(2));
+          g.style.transformOrigin='center';
+          g.style.setProperty('--grow',ratio.toFixed(2));
+          g.classList.add('born');g.classList.remove('not-born');
+        } else {
+          g.classList.add('not-born');g.classList.remove('born');
+        }
+      });
+      range.value=i;
+    }
+    window.__applyTimeframe=applyFrame;
+    applyFrame(-1); // 初期は現在
+    range.addEventListener('input',function(){stopPlay();applyFrame(+range.value);});
+    document.getElementById('tb-now').onclick=function(){stopPlay();applyFrame(-1);};
+    function stopPlay(){if(playTimer){clearInterval(playTimer);playTimer=null;playBtn.textContent='▶︎';}}
+    playBtn.onclick=function(){
+      if(playTimer){stopPlay();return;}
+      playBtn.textContent='⏸';
+      var i=+range.value>=TIMELINE.frames.length-1?0:+range.value;
+      applyFrame(i);
+      playTimer=setInterval(function(){
+        i++;
+        if(i>=TIMELINE.frames.length){stopPlay();return;}
+        applyFrame(i);
+      },900);
+    };
+  }
   // ---- フロービュー: 呼び出し関係を左→右の有向フロー（サブシーン上に描く） ----
   document.getElementById('mode-flow').addEventListener('click',function(){
     if(sub.style.display==='flex'){sub.style.display='none';setFlowButton(false);document.getElementById('subinfo').style.display='none';}
