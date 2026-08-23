@@ -243,9 +243,9 @@ for(const n of NODES){
   m.add(ol); // アウトライン: scale.yに追従して伸びる
   cityGroup.add(m);pickables.push(m);meshes[n.id]=m;
 }
-// 屋上マーカー（新築表示用）
-const newGeo=new THREE.ConeGeometry(1.2,2.2,4);
-for(const id in meshes){ /* 必要時のみ生成 */ }
+// 屋上マーカー（タイムライン「新築」表示用）— 必要時に生成
+const newGeo=new THREE.ConeGeometry(1.4,2.6,4);
+const newMat=new THREE.MeshBasicMaterial({color:0xd96c47});
 
 // エッジ（呼び出しを弧で描く）: 主線は太めのグレー、太さはfan-in比例
 const edgeGroup=new THREE.Group();cityGroup.add(edgeGroup);
@@ -450,11 +450,83 @@ window.addEventListener('keydown',function(e){
 });
 
 // レンダーループ（回転慣性なし、必要時のみ描画で省電力）
+var timeAnims=[]; // タイムバー誕生アニメ: {m,h0,h1,t}
 function loop(){
   requestAnimationFrame(loop);
+  // 誕生アニメ進行（cubic-out、0.5s）
+  for(var i=timeAnims.length-1;i>=0;i--){
+    var a=timeAnims[i];a.t+=1/30;
+    var k=Math.min(1,a.t/15),e=1-Math.pow(1-k,3);
+    a.m.scale.y=a.h0+(a.h1-a.h0)*e;
+    if(k>=1)timeAnims.splice(i,1);
+  }
   renderer.render(scene,camera);
 }
 loop();
+
+// ---- タイムバー: git履歴で街の成長を再生（SVG版ロジックの3D移植） ----
+if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
+  const range=document.getElementById('tb-range'),label=document.getElementById('tb-label'),playBtn=document.getElementById('tb-play');
+  range.max=TIMELINE.frames.length-1;
+  var playTimer=null,anims=timeAnims;
+  function setHeight(m,h){ // 誕生アニメ: 現在値→目標へcubic-outで立ち上がる
+    anims.push({m,h0:m.scale.y,h1:h,t:0});
+  }
+  function applyFrame(i){
+    // 前フレーム掃除: 実行中アニメを完成値に落着させ、マーカー撤去
+    for(const a of anims)a.m.scale.y=a.h1;
+    anims=[];
+    cityGroup.children.filter(c=>c.userData.marker).forEach(c=>{cityGroup.remove(c);});
+    if(i<0){ // -1 = 現在
+      label.textContent='現在 — '+NODES.length+'files';
+      for(const n of NODES){const m=meshes[n.id];m.scale.y=n.h;m.visible=true;m.material.opacity=1;m.material.transparent=false;}
+      range.value=TIMELINE.frames.length-1;
+      return;
+    }
+    var f=TIMELINE.frames[i];
+    label.textContent=f.date+' '+f.hash+' · '+f.msg.slice(0,28)+' ('+f.nFiles+'files/'+f.totalLoc+'loc)';
+    for(const n of NODES){
+      const m=meshes[n.id];
+      var loc=f.files[n.id];
+      if(loc!==undefined){
+        // 当時存在: LOC比率で伸縮（成長が見える）
+        var ratio=Math.max(loc,1)/Math.max(n.loc,1);
+        m.visible=true;m.material.opacity=1;m.material.transparent=false;
+        m.scale.y=Math.max(0.5,n.h*ratio);
+        // 新築（前フレームに無い）は屋上マーカー+ポップ
+        var prev=i>0?TIMELINE.frames[i-1].files[n.id]:undefined;
+        if(prev===undefined){
+          setHeight(m,Math.max(0.5,n.h*ratio));
+          const cone=new THREE.Mesh(newGeo,newMat);
+          cone.position.set(n.x,n.h*ratio+1.3,n.z);
+          cone.userData.marker=true;
+          cityGroup.add(cone);
+        }
+      } else {
+        // 未誕生: 更地（潰して半透明）
+        m.visible=true;m.scale.y=0.02;
+        m.material.transparent=true;m.material.opacity=0.12;
+      }
+    }
+    range.value=i;
+  }
+  window.__applyTimeframe=applyFrame; // QA用
+  applyFrame(-1);
+  range.addEventListener('input',function(){stopPlay();applyFrame(+range.value);});
+  document.getElementById('tb-now').onclick=function(){stopPlay();applyFrame(-1);};
+  function stopPlay(){if(playTimer){clearInterval(playTimer);playTimer=null;playBtn.textContent='▶︎';}}
+  playBtn.onclick=function(){
+    if(playTimer){stopPlay();return;}
+    playBtn.textContent='⏸';
+    var i=+range.value>=TIMELINE.frames.length-1?0:+range.value;
+    applyFrame(i);
+    playTimer=setInterval(function(){
+      i++;
+      if(i>=TIMELINE.frames.length){stopPlay();return;}
+      applyFrame(i);
+    },900);
+  };
+}
 </script>
 </body></html>`;
 
@@ -466,6 +538,11 @@ loop();
 if (process.argv[1] && process.argv[1].endsWith('render3d.mjs')) {
   const city = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
   const out = process.argv[3] ?? 'dist/index3d.html';
-  const r = render(city, { out });
-  console.log(`rendered ${out} (${(r.bytes / 1024).toFixed(0)}KB) in ${r.ms}ms`);
+  // タイムライン: TIMELINE env or timeline-<name>.json。city-<name>.json なら timeline-<name>.json を引く
+  const base = path.basename(String(process.argv[2] ?? ''));
+  const nameMatch = base.match(/^city-(.*)\.json$/);
+  let timeline = null;
+  try { timeline = JSON.parse(fs.readFileSync(process.env.TIMELINE ?? (nameMatch ? `timeline-${nameMatch[1]}.json` : 'timeline.json'), 'utf8')); } catch { /* なしでも動く */ }
+  const r = render(city, { out, timeline });
+  console.log(`rendered ${out} (${(r.bytes / 1024).toFixed(0)}KB) in ${r.ms}ms${timeline ? ` +timeline(${timeline.frames?.length ?? 0}f)` : ''}`);
 }
