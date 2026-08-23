@@ -16,24 +16,30 @@ export function render(city, opts = {}) {
   const t0 = performance.now();
   const nodes = city.nodes;
 
-  // --- レイアウト（SVG版と同じ: 区画ごとに必要サイズ確保、GAP=道幅） ---
+  // --- レイアウト（区画は大きい順に棚詰め、GAP=道幅。建物は区画の中心に置く） ---
+  const TILE = 4; // グリッド1マス=4世界単位
   const districts = new Map();
   for (const n of nodes) {
     if (!districts.has(n.district)) districts.set(n.district, []);
     districts.get(n.district).push(n);
   }
-  const names = [...districts.keys()].sort();
+  const names = [...districts.keys()].sort((a, b) =>
+    (districts.get(b).length - districts.get(a).length) || (a < b ? -1 : 1));
   const perRow = Math.max(1, Math.ceil(Math.sqrt(names.length)));
   const pos = new Map();
   const plates = [];
-  const GAP = 3;
+  const GAP = 1;
   let ox = 0, oy = 0, rowMax = 0;
   names.forEach((name, i) => {
     const size = Math.max(1, Math.ceil(Math.sqrt(districts.get(name).length)));
     if (i > 0 && i % perRow === 0) { ox = 0; oy += rowMax + GAP; rowMax = 0; }
     const files = districts.get(name).sort((a, b) => (b.fanIn - a.fanIn) || (b.loc - a.loc));
-    files.forEach((n, j) => pos.set(n.id, { col: ox + (j % size), row: oy + Math.floor(j / size) }));
-    plates.push({ name, ox, oy, size });
+    files.forEach((n, j) => {
+      // ブロック中心基準で配置する（1建物区画でもプレートの真ん中に立つ）
+      const c = ox + (j % size), r = oy + Math.floor(j / size);
+      pos.set(n.id, { x: (c - (size - 1) / 2) * TILE, z: (r - (size - 1) / 2) * TILE });
+    });
+    plates.push({ name, cx: (ox + (size - 1) / 2) * TILE, cz: (oy + (size - 1) / 2) * TILE, w: (size + 0.7) * TILE });
     ox += size + GAP;
     rowMax = Math.max(rowMax, size);
   });
@@ -41,7 +47,6 @@ export function render(city, opts = {}) {
   const maxLoc = Math.max(...nodes.map(n => n.loc), 1);
   const maxFan = Math.max(...nodes.map(n => n.fanIn), 1);
   const heightOf = n => 2 + 22 * Math.pow(n.fanIn / maxFan, 0.7) + 4 * (n.loc / maxLoc);
-  const TILE = 4; // グリッド1マス=4世界単位
 
   // --- three.jsシーンデータ（JS側でメッシュ生成させる） ---
   const sceneData = nodes.map(n => {
@@ -49,11 +54,18 @@ export function render(city, opts = {}) {
     return {
       id: n.id, kind: n.kind, district: n.district, loc: n.loc, fanIn: n.fanIn,
       deps: n.deps, syms: n.syms, uses: n.uses,
-      x: p.col * TILE, z: p.row * TILE, h: heightOf(n),
+      x: p.x, z: p.z, h: heightOf(n),
       color: KIND_COLORS[n.kind] ?? KIND_COLORS.module,
     };
   });
-  const plateData = plates.map(p => ({ name: p.name, ox: (p.ox - 0.5) * TILE, oz: (p.oy - 0.5) * TILE, w: (p.size + 1) * TILE }));
+  const plateData = plates.map(p => ({ name: p.name, x: p.cx, z: p.cz, w: p.w }));
+  // 街のバウンディボックス中心（カメラ初期位置・リセット先）
+  let bb0=Infinity,bb1=-Infinity,bb2=Infinity,bb3=-Infinity;
+  for(const p of plates){
+    bb0=Math.min(bb0,p.cx-p.w/2);bb1=Math.max(bb1,p.cx+p.w/2);
+    bb2=Math.min(bb2,p.cz-p.w/2);bb3=Math.max(bb3,p.cz+p.w/2);
+  }
+  const CITY_CX=((bb0+bb1)/2).toFixed(1), CITY_CZ=((bb2+bb3)/2).toFixed(1);
 
   // エッジ（fan-in上位220）— 3D座標(x,z,高さ)を持たせる
   const byId = new Map(nodes.map(n => [n.id, n]));
@@ -64,8 +76,8 @@ export function render(city, opts = {}) {
       const a = pos.get(e.from), b = pos.get(e.to);
       if (!a || !b) return null;
       return {
-        a: { x: a.col * TILE, z: a.row * TILE, h: heightOf(byId.get(e.from)) },
-        b: { x: b.col * TILE, z: b.row * TILE, h: heightOf(byId.get(e.to)) },
+        a: { x: a.x, z: a.z, h: heightOf(byId.get(e.from)) },
+        b: { x: b.x, z: b.z, h: heightOf(byId.get(e.to)) },
       };
     }).filter(Boolean);
 
@@ -180,13 +192,13 @@ sun.position.set(60,140,40);scene.add(sun);
 const fill=new THREE.DirectionalLight(0xe8f0ff,0.5);
 fill.position.set(-60,90,-70);scene.add(fill);
 
-// 地面プレート（区画）
+// 地面プレート（区画）— {x,z}=ブロック中心, w=一辺
 const TILE=${TILE};
 const groundMat=new THREE.MeshLambertMaterial({color:0xe6ddc4});
 for(const p of ${JSON.stringify(plateData)}){
-  const geo=new THREE.BoxGeometry(p.w,0.5,p.w);
+  const geo=new THREE.BoxGeometry(p.w,0.4,p.w);
   const m=new THREE.Mesh(geo,groundMat);
-  m.position.set(p.ox+p.w/2-TILE/2,-0.25,p.oz+p.w/2-TILE/2);
+  m.position.set(p.x,-0.2,p.z);
   cityGroup.add(m);
 }
 
@@ -250,7 +262,7 @@ function rebuildEdges(){
 rebuildEdges();
 
 // ---- カメラ操作（パン専用: ドラッグで地図移動。回転なし）----
-let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(30,0,30);
+let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(${CITY_CX},0,${CITY_CZ});
 function updateCamera(){
   const d=140; // 正射影なので距離は固定、zoomで拡縮
   camera.position.set(
@@ -278,7 +290,7 @@ cv.addEventListener('pointermove',function(e){
   var scale=(FRUSTUM/zoom)/innerHeight;
   // 画面右(世界) = normalize(cross(forward, up)) = (cos(yaw), 0, -sin(yaw))
   // 画面上(地面射影) = forward の水平成分 = (-cos(yaw), 0, -sin(yaw))
-  var rx=Math.cos(yaw), rz=-Math.sin(yaw);
+  var rx=-Math.cos(yaw), rz=Math.sin(yaw);
   var fx=-Math.cos(yaw), fz=-Math.sin(yaw);
   target.x+=rx*dx*scale; target.z+=rz*dx*scale;
   target.x+=fx*dy*scale/Math.max(0.3,Math.cos(pitch));
@@ -306,7 +318,7 @@ cv.addEventListener('wheel',function(e){
     updateCamera();
   }
 },{passive:false});
-cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;zoom=1;target.set(30,0,30);updateCamera();});
+cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;zoom=1;target.set(${CITY_CX},0,${CITY_CZ});updateCamera();});
 
 // リサイズ
 addEventListener('resize',function(){
