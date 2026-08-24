@@ -280,7 +280,7 @@ function rebuildEdges(){
     var col=importance>0.45?0x6f6754:0xb3ab92;
     var op=0.2+importance*0.28;                          // 既定0.2、主線でも~0.48
     const m=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshLambertMaterial({color:col,transparent:true,opacity:op}));
-    m.userData={aM:meshes[na.id],bM:meshes[nb.id]};
+    m.userData={aM:meshes[na.id],bM:meshes[nb.id],col:col,op:op};
     edgeGroup.add(m);
     liveEdges.push({m:m,ra:radius,ha:-1,hb:-1});
   }
@@ -306,6 +306,7 @@ function updateEdgeHeights(){
 // ---- カメラ操作（ドラッグ=パン / 右・⌘+Ctrl+ドラッグ=回転）----
 let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(${CITY_CX},0,${CITY_CZ});
 window.__cam=function(){return {yaw,pitch,zoom,target:{x:target.x,z:target.z}}}; // QA用
+window.__select=function(id){selectNode(id);return window.__sel?window.__sel():{sel:id}}; // QA用
 function updateCamera(){
   const d=140; // 正射影なので距離は固定、zoomで拡縮
   camera.position.set(
@@ -401,13 +402,30 @@ const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
 const panel=document.getElementById('panel');
 var selected=null;
 function selectNode(id){
-  if(selected){selected.material.emissive.setHex(0x000000);}
-  selected=meshes[id];
+  // 前回選択の解除: ビルは種別色へ、ワイヤは基本値へ
   if(selected){
-    selected.material.emissive.setHex(0x664411);
-    var n=selected.userData.node;
-    showPanel(n);
+    selected.material.emissive.setHex(0x000000);
+    selected.children[0].material.color.setHex(0x14120b);selected.children[0].material.opacity=1;
+    selected=null;
   }
+  for(const le of liveEdges){le.m.material.color.setHex(le.m.userData.col);le.m.material.opacity=le.m.userData.op;}
+  if(!id)return;
+  const m=meshes[id];if(!m)return;
+  selected=m;
+  m.material.emissive.setHex(0x2a1a08);
+  m.children[0].material.color.setHex(0xd96c47);m.children[0].material.opacity=1;
+  // 非選択ビルを灰転、関連ワイヤを強調
+  for(const n of NODES){
+    const b=meshes[n.id];
+    if(b!==m)b.material.emissive.setHex(0x111008);
+  }
+  for(const le of liveEdges){
+    const A=le.m.userData.aM,B=le.m.userData.bM;
+    if(A===m||B===m){le.m.material.color.setHex(0xd96c47);le.m.material.opacity=Math.min(1,le.m.userData.op*3);}
+    else le.m.material.opacity=le.m.userData.op*0.4;
+  }
+  var n=m.userData.node;
+  showPanel(n);
 }
 // ヘッダーはflex-wrapで段数が変わる → 固定topでなく実高さから配置する
 function belowHeader(){return (document.querySelector('header').offsetHeight+10)+'px';}
@@ -436,7 +454,7 @@ cv.addEventListener('pointerup',function(e){
   raycaster.setFromCamera(pointer,camera);
   var hits=raycaster.intersectObjects(pickables,false);
   if(hits.length)selectNode(hits[0].object.userData.node.id);
-  else panel.style.display='none';
+  else {selectNode(null);panel.style.display='none';}
   downPos=null;
 });
 // ホバーでカーソル変更
@@ -558,6 +576,19 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
   }
   function ratioOf(n,loc){return Math.max(loc,1)/Math.max(n.loc,1);}
   window.__applyTimeframe=applyFrame; // QA用
+  window.__sel=function(){ // QA用: 選択ハイライト状態
+    if(!selected)return {sel:null};
+    var hot=0,dim=0;
+    for(var i=0;i<liveEdges.length;i++){
+      var le=liveEdges[i];
+      if(!le.m.visible)continue;
+      var U=le.m.userData;
+      if((U.aM===selected||U.bM===selected)&&le.m.material.color.getHexString()==='d96c47')hot++;
+      else if(le.m.material.opacity<U.op)dim++;
+    }
+    return {sel:selected.userData.node.id,outline:'#'+selected.children[0].material.color.getHexString(),
+      emissive:'#'+selected.material.emissive.getHexString(),hotWires:hot,dimmedWires:dim};
+  };
   window.__edges=function(){ // QA用: ワイヤ追従状態
     var vis=0,bad=0;
     for(var i=0;i<liveEdges.length;i++){
