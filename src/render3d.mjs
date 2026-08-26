@@ -309,9 +309,90 @@ function updateEdgeHeights(){
       new THREE.Vector3(ma.position.x,ha,ma.position.z),
       new THREE.Vector3((ma.position.x+mb.position.x)/2,Math.max(ha,hb)+16,(ma.position.z+mb.position.z)/2),
       new THREE.Vector3(mb.position.x,hb,mb.position.z));
+    e.curve=curve; // パケットが弧上を歩くのに使う
     e.m.geometry=new THREE.TubeGeometry(curve,20,e.ra,5,false);
   }
 }
+
+// ---- パケット: ワイヤ上を流れる点（ウォーク=呼び出し連鎖の追跡 / 常時=fan-in上位の静かな流れ） ----
+const packetGroup=new THREE.Group();cityGroup.add(packetGroup);
+function makePacket(color,size){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(size||0.55,10,8),new THREE.MeshBasicMaterial({color:color||0xd96c47}));
+  m.visible=false;
+  packetGroup.add(m);
+  return m;
+}
+// edgeKey(aFile,bFile)→liveEdge。方向はa→b固定だがcurveは逆走できる
+var edgeByKey=null;
+function findEdge(fa,fb){
+  if(!edgeByKey){
+    edgeByKey={};
+    for(const le of liveEdges){
+      const A=le.m.userData.aM,B=le.m.userData.bM;
+      if(!A||!B)continue;
+      edgeByKey[A.userData.node.id+'|'+B.userData.node.id]=le;
+    }
+  }
+  return edgeByKey[fa+'|'+fb]||edgeByKey[fb+'|'+fa];
+}
+// ウォーク: 選択関数からcalls連鎖をDFS（深さ≤5・訪問済み抑止）→経路の弧リストを作る
+var walk=null; // {hops:[{le,rev,t}], i, t, flash:[mesh...]}
+function buildRoute(file,fn){
+  const adj={}; // key: file::fn → 隣接ノード配列
+  for(const c of CALLS){
+    const k=c.f+'::'+c.fs;
+    (adj[k]=adj[k]||[]).push({f:c.t,fs:c.ts});
+    // 呼ばれ側からの逆辺も探索に含める（誰が自分を呼んでるかも追える）
+    (adj[c.t+'::'+c.ts]=adj[c.t+'::'+c.ts]||(adj[c.t+'::'+c.ts]=[])).push({f:c.f,fs:c.fs,back:true});
+  }
+  const seen=new Set([file+'::'+fn]);
+  const route=[];
+  function dfs(f,fn,depth){
+    if(depth>=5)return;
+    for(const nx of (adj[f+'::'+fn])||[]){
+      const key=nx.f+'::'+nx.fs;
+      if(seen.has(key))continue;
+      seen.add(key);
+      const le=findEdge(f,nx.f);
+      if(le){route.push({le:le,aF:f,bF:nx.f});}
+      dfs(nx.f,nx.fs,depth+1);
+      if(route.length>=12)return; // 経路は最大12ホップで十分読める
+    }
+  }
+  dfs(file,fn,0);
+  return route;
+}
+function startWalk(file,fn){
+  stopWalk();
+  const hops=buildRoute(file,fn).map(function(h,i){
+    return {le:h.le,aF:h.aF,t:-i*0.45}; // 負のt=開始待ち（前のパケットが弧の中腹で次が発車）
+  });
+  walk={hops:hops};
+  window.__walkState=function(){return {hops:hops.length,active:hops.filter(function(h){return h.t>=0&&h.t<1}).length,done:hops.filter(function(h){return h.t>=1}).length};};
+}
+window.__packets=function(){ // QA用: 流動中パケット数
+  var v=0;for(var i=0;i<packetGroup.children.length;i++)if(packetGroup.children[i].visible)v++;
+  return {visible:v,ambient:ambient.length};
+};
+function stopWalk(){
+  walk=null;
+  window.__walkState=function(){return null;};
+}
+// 常時パケット: fan-in上位ワイヤを静かに流す（量は少なく）
+var ambient=[];
+function seedAmbient(){
+  const byFan=[...NODES].sort((a,b)=>b.fanIn-a.fanIn).slice(0,6); // fan-in上位6ビルに入る線
+  let n=0;
+  for(const le of liveEdges){
+    const A=le.m.userData.aM,B=le.m.userData.bM;
+    if(!A||!B)continue;
+    if(byFan.some(nd=>nd.id===B.userData.node.id)){
+      ambient.push({le:le,m:makePacket(0xb3ab92,0.4),t:Math.random(),speed:0.0016+Math.random()*0.0012});
+      if(++n>=10)break; // 同時に流れるのは10個まで
+    }
+  }
+}
+seedAmbient();
 
 // ---- カメラ操作（ドラッグ=パン / 右・⌘+Ctrl+ドラッグ=回転）----
 let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(${CITY_CX},0,${CITY_CZ});
@@ -461,8 +542,7 @@ function showPanel(n){
   panel.dataset.nodeId=n.id;
   panel.style.display='block';
 }
-// 関数クリック → 呼び出しウォーク（実装はP3。ここはUI配線）
-var startWalk=function(file,fn){console.log('[walk stub]',file,fn);};
+// 関数クリック → 呼び出しウォーク（startWalk本体はパケットセクションでfunction宣言済み）
 panel.addEventListener('click',function(e){
   var sym=e.target.closest('.sym');
   if(sym&&sym.getAttribute('data-sym'))startWalk(panel.dataset.nodeId,sym.getAttribute('data-sym'));
@@ -528,6 +608,7 @@ window.addEventListener('keydown',function(e){
 
 // レンダーループ（回転慣性なし、必要時のみ描画で省電力）
 var timeAnims=[],breathT=0,timeMarkers=[]; // 誕生アニメ: {m,h0,h1,t} / リング呼吸位相 / タイムバーマーカー
+var reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function loop(){
   requestAnimationFrame(loop);
   // 誕生アニメ進行（cubic-out、0.5s）
@@ -547,6 +628,37 @@ function loop(){
       mk.scale.set(br,1,br);
       mk.material.opacity=0.65+Math.sin(breathT*2.6)*0.25;
     }
+  }
+  // 常時パケット: 弧上をゆっくり（reduced-motion尊重）
+  if(!reduceMotion){
+    for(const ap of ambient){
+      ap.t=(ap.t+ap.speed)%1;
+      if(!ap.le.m.visible||!ap.le.curve){ap.m.visible=false;continue;}
+      const A=ap.le.m.userData.aM,B=ap.le.m.userData.bM;
+      const rev=A.userData.node.fanIn<B.userData.node.fanIn; // fan-in弱い方から強い方へ流す
+      const p=rev?ap.le.curve.getPoint(1-ap.t):ap.le.curve.getPoint(ap.t);
+      ap.m.position.copy(p);ap.m.visible=true;
+    }
+    // ウォークパケット: 順番に発車、弧を1秒で走る
+    if(walk){
+      let allDone=true;
+      for(const h of walk.hops){
+        if(h.pk)h.pk.visible=false; // 毎フレーム一旦消す（完了・待機を単純に）
+        h.t+=0.02;
+        if(h.t<0){allDone=false;continue;} // まだ発車しない
+        if(h.t>=1)continue;               // 完着
+        allDone=false;
+        if(!h.pk)h.pk=makePacket(0xd96c47,0.7);
+        if(!h.le.m.visible||!h.le.curve)continue;
+        const A=h.le.m.userData.aM,B=h.le.m.userData.bM;
+        const rev=A.userData.node.id!==h.aF; // aF側が始点になるよう向き決め
+        const p=rev?h.le.curve.getPoint(1-h.t):h.le.curve.getPoint(h.t);
+        h.pk.position.copy(p);h.pk.visible=true;
+      }
+      if(allDone)stopWalk();
+    }
+  } else {
+    packetGroup.visible=false;
   }
   renderer.render(scene,camera);
 }
