@@ -129,12 +129,33 @@ function extractSymbols(src) {
     for (const p of SYM_PATTERNS) {
       const m = p.re.exec(line);
       if (m) {
-        out.push({ k: p.k, n: p.k === 'route' ? `${m[1].toUpperCase()} ${m[2]}` : m[1], l: i + 1, ...(p.def ? { d: 1 } : {}) });
+        const name = p.k === 'route' ? `${m[1].toUpperCase()} ${m[2]}` : m[1];
+        out.push({ k: p.k, n: name, l: i + 1, ...(p.def ? { d: 1 } : {}) });
         break;
       }
     }
   }
+  // 本体終端の推定: ブレース/括弧の深さが定義行から0に戻る行。開きがなければ単一行
+  assignJsEnds(out, lines);
   return out;
+}
+
+function assignJsEnds(syms, lines) {
+  const sorted = [...syms].sort((a, b) => a.l - b.l);
+  for (let si = 0; si < sorted.length; si++) {
+    const s = sorted[si];
+    const hardEnd = si + 1 < sorted.length ? sorted[si + 1].l : lines.length + 1;
+    let depth = 0, opened = false, e = Math.min(s.l, lines.length);
+    for (let i = s.l - 1; i < lines.length && i < hardEnd - 1; i++) {
+      for (const ch of lines[i]) {
+        if (ch === '{' || ch === '(' || ch === '[') { depth++; opened = true; }
+        else if (ch === '}' || ch === ')' || ch === ']') depth--;
+      }
+      if (opened && depth <= 0) { e = i + 1; break; }
+      if (!opened) e = i + 1; // 単一行宣言（type alias等）
+    }
+    s.e = e;
+  }
 }
 
 // --- Python対応: import/シンボル/呼び出し ---
@@ -175,7 +196,25 @@ function extractPySymbols(src) {
     const rm = /u\.path\s*(?:==|\.startswith\()\s*["'](\/api\/[\w\-/.]*)["']/.exec(line);
     if (rm) out.push({ k: 'route', n: rm[1], l: i + 1 });
   }
+  // 終端推定: def行のインデントより深い連続ブロックの最終行
+  assignPyEnds(out, lines);
   return out;
+}
+
+function assignPyEnds(syms, lines) {
+  for (const s of syms) {
+    const base = lines[s.l - 1].search(/\S/);
+    if (base < 0) continue;
+    let e = s.l;
+    for (let i = s.l; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.trim()) continue;
+      const ind = line.search(/\S/);
+      if (ind <= base) break;
+      e = i + 1;
+    }
+    s.e = e;
+  }
 }
 
 const reWord = s => new RegExp('\\b' + s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b');
@@ -345,6 +384,32 @@ export function extract(root) {
   }
 
   const list = [...nodes.values()].sort((a, b) => a.id.localeCompare(b.id));
+
+  // 呼び出しグラフ v2: ファイル内calls + import束縛の外部呼出しを「関数→関数」に解決して統合。
+  // 規律: ターゲットシンボルが抽出済み表に存在する組だけ採用（偽陽性抑制）
+  const symIndex = new Set(); // `${file}::${name}`
+  for (const n of list) for (const s of (n.syms ?? [])) symIndex.add(n.id + '::' + s.n);
+  const callsV2 = [];
+  for (const n of list) {
+    // 同一ファイル内: from/toとも同ファイルの実在シンボル
+    for (const c of (n.calls ?? [])) {
+      if (symIndex.has(n.id + '::' + c.to)) callsV2.push({ f: n.id, fs: c.from, t: n.id, ts: c.to });
+    }
+    // 横断: その関数本体(x.from)内でimport束縛を使用し、ターゲットファイルのexportシンボルとして存在する
+    for (const x of (n.ext ?? [])) {
+      if (symIndex.has(x.file + '::' + x.name)) callsV2.push({ f: n.id, fs: x.from || '(module)', t: x.file, ts: x.name });
+    }
+  }
+  // 重複除去（同一組が複数bindから流れることがある）
+  const seenCall = new Set();
+  const callsDedup = callsV2.filter(c => {
+    const k = c.f + '::' + c.fs + '→' + c.t + '::' + c.ts;
+    if (seenCall.has(k)) return false;
+    seenCall.add(k); return true;
+  });
+  // 上限1000件（超過は切り捨て。呼び出しは既にfan-in上位ビルに偏る）
+  const callsFinal = callsDedup.length > 1000 ? callsDedup.slice(0, 1000) : callsDedup;
+
   return {
     root: path.basename(absRoot),
     generatedAt: new Date().toISOString(),
@@ -354,11 +419,13 @@ export function extract(root) {
       edges: edges.length,
       districts: new Set(list.map(n => n.district)).size,
       externalPkgs: external.size,
+      calls: callsFinal.length,
       extractMs: Math.round(performance.now() - t0),
     },
-    nodes: list.map(({ id, kind, district, loc, bytes, deps, exports: exp, fanIn, syms, uses, calls, ext }) =>
-      ({ id, kind, district, loc, bytes, deps, exports: exp, fanIn, syms, uses, calls, ext })),
+    nodes: list.map(({ id, kind, district, loc, bytes, deps, exports: exp, fanIn, syms }) =>
+      ({ id, kind, district, loc, bytes, deps, exports: exp, fanIn, syms })),
     edges,
+    calls: callsFinal,
   };
 }
 
