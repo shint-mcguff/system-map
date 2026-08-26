@@ -393,10 +393,11 @@ results.addEventListener('click',function(e){
 });
 window.addEventListener('keydown',function(e){
   if(e.key==='/'&&document.activeElement!==qInput){e.preventDefault();qInput.focus();}
+  if(e.key==='Escape'){selectNode(null);panel.style.display='none';results.style.display='none';qInput.blur();}
 });
 
 // レンダーループ（回転慣性なし、必要時のみ描画で省電力）
-var timeAnims=[]; // タイムバー誕生アニメ: {m,h0,h1,t}
+var timeAnims=[],breathT=0,timeMarkers=[]; // 誕生アニメ: {m,h0,h1,t} / リング呼吸位相 / タイムバーマーカー
 function loop(){
   requestAnimationFrame(loop);
   // 誕生アニメ進行（cubic-out、0.5s）
@@ -407,6 +408,16 @@ function loop(){
     if(k>=1)timeAnims.splice(i,1);
   }
   updateEdgeHeights(); // ワイヤ端点をビル高さに追従（変化なしフレームは実質ゼロコスト）
+  if(timeMarkers.length){ // 新築リングの呼吸（scale+opacity、静かに脈打つ）
+    breathT+=0.016;
+    var br=1+Math.sin(breathT*2.6)*0.12;
+    for(var bi=0;bi<timeMarkers.length;bi++){
+      var mk=timeMarkers[bi];
+      if(mk.material.map)continue; // ストライプ区画は呼吸させない
+      mk.scale.set(br,1,br);
+      mk.material.opacity=0.65+Math.sin(breathT*2.6)*0.25;
+    }
+  }
   renderer.render(scene,camera);
 }
 loop();
@@ -415,7 +426,7 @@ loop();
 if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
   const range=document.getElementById('tb-range'),label=document.getElementById('tb-label'),playBtn=document.getElementById('tb-play');
   range.max=TIMELINE.frames.length-1;
-  var playTimer=null,anims=timeAnims,timeMarkers=[];
+  var playTimer=null,anims=timeAnims;
   function setHeight(m,h){ // 誕生アニメ: 現在値→目標へcubic-outで立ち上がる
     anims.push({m,h0:m.scale.y,h1:h,t:0});
   }
@@ -425,6 +436,7 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
     anims=[];
     for(const mk of timeMarkers){cityGroup.remove(mk);mk.material.dispose();}
     timeMarkers=[];
+    breathT=0;
     if(i<0){ // -1 = 現在
       label.textContent='現在 — '+NODES.length+'files';
       for(const n of NODES){
@@ -513,7 +525,15 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
   window.__tlState=function(){return {
     rings:timeMarkers.filter(function(mk){return !mk.material.map}).length,
     lots:timeMarkers.length-timeMarkers.filter(function(mk){return !mk.material.map}).length,
-    moving:timeAnims.length
+    moving:timeAnims.length,
+    breath:(function(){ // QA用: リング呼吸の振れ幅
+      var mn=1,mx=0,n=0;
+      for(var i=0;i<timeMarkers.length;i++){
+        var mk=timeMarkers[i];if(mk.material.map)continue;
+        n++;mn=Math.min(mn,mk.material.opacity);mx=Math.max(mx,mk.material.opacity);
+      }
+      return n?{n:n,min:+mn.toFixed(2),max:+mx.toFixed(2)}:{n:0};
+    })()
   }};
   applyFrame(-1);
   range.addEventListener('input',function(){stopPlay();applyFrame(+range.value);});
