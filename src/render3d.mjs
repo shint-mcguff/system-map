@@ -57,11 +57,12 @@ export function render(city, opts = {}) {
     const p = pos.get(n.id);
     return {
       id: n.id, kind: n.kind, district: n.district, loc: n.loc, fanIn: n.fanIn,
-      deps: n.deps, syms: n.syms, uses: n.uses,
+      deps: n.deps, syms: n.syms,
       x: p.x, z: p.z, h: heightOf(n),
       color: KIND_COLORS[n.kind] ?? KIND_COLORS.module,
     };
   });
+  const CALLS = (city.calls ?? []).map(c => ({ f: c.f, fs: c.fs, t: c.t, ts: c.ts }));
   const PM = 0.3; // プレートの薄い縁
   const plateData = plates.map(p => ({
     name: p.name,
@@ -128,9 +129,14 @@ header h1{font-size:16px;letter-spacing:.04em}
 #panel h2{font-size:13px;word-break:break-all}
 #panel .row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed #d8cfb4}
 #panel .sec{margin-top:10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.6;border-bottom:1px solid #d8cfb4;padding-bottom:2px}
-#panel .sym{font-size:11px;padding:2px 0}
+#panel .sym{font-size:11px;padding:2px 0;cursor:pointer}
+#panel .sym:hover{background:rgba(217,108,71,.12)}
 #panel .sym i{font-style:normal;color:var(--accent);margin-right:6px}
 #panel .sym span{opacity:.45;margin-left:auto;float:right}
+#panel .chip{display:inline-block;width:9px;height:9px;margin-right:6px;border:1px solid var(--ink);vertical-align:baseline}
+#panel .one{font-size:12px;line-height:1.55;margin:8px 0 4px}
+#panel details.more summary{cursor:pointer;font-size:11px;opacity:.6;user-select:none}
+#panel details.more[open] summary{opacity:.4}
 #panel .deps{margin-top:8px;font-size:11px;line-height:1.7;word-break:break-all}
 #panel .deps a{color:var(--accent);cursor:pointer}
 .hint{margin-left:auto;font-size:11px;opacity:.55}
@@ -172,8 +178,12 @@ const THREE = await import(URL.createObjectURL(threeBlob));
 
 var NODES=${JSON.stringify(sceneData)};
 var EDGES=${JSON.stringify(edges)};
+var CALLS=${JSON.stringify(CALLS)};
 var NOTES=${JSON.stringify(opts.annotations ?? {})};
 var TIMELINE=${JSON.stringify(opts.timeline ?? null)};
+// 種別ごとの一文説明（アノテーションがなければこれ。insightsで上書き前提のフォールバック）
+var ONE_LINERS={page:'ユーザーが触る画面。この街の表玄関。',component:'UIの部品。画面を組み上げるレンガ。',api:'外の世界との窓口。リクエストを受け処理を依頼する。',hook:'状態と副作用を束ねる、Reactの神経。',lib:'横串のロジック。各棟から呼ばれる公共施設。',type:'データの契約書。街中の会話の語彙を定める。',test:'品質の門番。',module:'設定・基盤。街のインフラ。'};
+function besc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ---- シーン基本 ----
 const stage=document.getElementById('stage');
@@ -431,18 +441,35 @@ function selectNode(id){
 function belowHeader(){return (document.querySelector('header').offsetHeight+10)+'px';}
 function showPanel(n){
   var note=(NOTES[n.id]||{})['_file']||'';
-  var symRows=(n.syms||[]).slice(0,40).map(function(s){
-    return '<div class="sym"><i>·</i>'+s.n+' <span>:'+s.l+'</span></div>';
+  // 一文説明: アノテーション → 種別テンプレ（insights.jsonがあれば後で上書き）
+  var one=note||(ONE_LINERS[n.kind]||('「'+n.id.split('/').pop()+'」はこの街の'+n.kind+'.'));
+  var symRows=(n.syms||[]).filter(function(s){return s.k!=='type'&&s.k!=='route';}).slice(0,40).map(function(s){
+    var fi=SYM_FANIN[n.id+'::'+s.n]||0;
+    return '<div class="sym" data-sym="'+besc(s.n)+'" title="'+s.l+(s.e?'–'+s.e:'')+'行 · クリックで呼び出しを追う"><i>·</i>'+besc(s.n)+
+      '<span>'+(fi?('×'+fi+' '):'')+s.l+'</span></div>';
   }).join('');
-  panel.innerHTML='<h2>'+n.id+'</h2>'+
+  panel.innerHTML='<h2><i class="chip" style="background:#'+n.color.toString(16).padStart(6,'0')+'"></i>'+besc(n.id)+'</h2>'+
+    '<p class="one">'+besc(one)+'</p>'+
+    '<details class="more"><summary>Read more</summary>'+
     '<div class="row"><span>kind</span><b>'+n.kind+'</b></div>'+
     '<div class="row"><span>loc</span><b>'+n.loc+'</b></div>'+
     '<div class="row"><span>fanned in by</span><b>'+n.fanIn+'</b></div>'+
-    ((n.syms||[]).length?'<div class="sec">exports ('+n.syms.length+')</div>'+symRows:'')+
-    '<div class="deps">imports: '+(n.deps.map(function(d){return d.split('/').pop()}).join(' · ')||'—')+'</div>';
+    '<div class="deps">imports: '+(n.deps.map(function(d){return d.split('/').pop()}).join(' · ')||'—')+'</div>'+
+    '</details>'+
+    ((symRows)?'<div class="sec">functions</div>'+symRows:'');
   panel.style.top=belowHeader();
+  panel.dataset.nodeId=n.id;
   panel.style.display='block';
 }
+// 関数クリック → 呼び出しウォーク（実装はP3。ここはUI配線）
+var startWalk=function(file,fn){console.log('[walk stub]',file,fn);};
+panel.addEventListener('click',function(e){
+  var sym=e.target.closest('.sym');
+  if(sym&&sym.getAttribute('data-sym'))startWalk(panel.dataset.nodeId,sym.getAttribute('data-sym'));
+});
+// 関数のfan-in（呼び出され側カウント）をCALLSから事前計算
+var SYM_FANIN={};
+for(const c of CALLS)SYM_FANIN[c.t+'::'+c.ts]=(SYM_FANIN[c.t+'::'+c.ts]||0)+1;
 let downPos=null;
 cv.addEventListener('pointerdown',function(e){downPos={x:e.clientX,y:e.clientY};});
 cv.addEventListener('pointerup',function(e){
