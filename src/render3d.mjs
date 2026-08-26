@@ -129,9 +129,10 @@ header h1{font-size:16px;letter-spacing:.04em}
 #panel h2{font-size:13px;word-break:break-all}
 #panel .row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed #d8cfb4}
 #panel .sec{margin-top:10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.6;border-bottom:1px solid #d8cfb4;padding-bottom:2px}
-#panel .sym{font-size:11px;padding:2px 0;cursor:pointer}
+#panel .sym{font-size:11px;padding:3px 0;cursor:pointer;border-bottom:1px dashed #e4dcc6}
 #panel .sym:hover{background:rgba(217,108,71,.12)}
 #panel .sym i{font-style:normal;color:var(--accent);margin-right:6px}
+#panel .sym em{display:block;font-style:normal;font-size:10.5px;line-height:1.5;opacity:.75;margin:2px 0 0 14px}
 #panel .sym span{opacity:.45;margin-left:auto;float:right}
 #panel .chip{display:inline-block;width:9px;height:9px;margin-right:6px;border:1px solid var(--ink);vertical-align:baseline}
 #panel .one{font-size:12px;line-height:1.55;margin:8px 0 4px}
@@ -181,6 +182,7 @@ var EDGES=${JSON.stringify(edges)};
 var CALLS=${JSON.stringify(CALLS)};
 var NOTES=${JSON.stringify(opts.annotations ?? {})};
 var TIMELINE=${JSON.stringify(opts.timeline ?? null)};
+var INSIGHTS=${JSON.stringify(opts.insights ?? {})};
 // 種別ごとの一文説明（アノテーションがなければこれ。insightsで上書き前提のフォールバック）
 var ONE_LINERS={page:'ユーザーが触る画面。この街の表玄関。',component:'UIの部品。画面を組み上げるレンガ。',api:'外の世界との窓口。リクエストを受け処理を依頼する。',hook:'状態と副作用を束ねる、Reactの神経。',lib:'横串のロジック。各棟から呼ばれる公共施設。',type:'データの契約書。街中の会話の語彙を定める。',test:'品質の門番。',module:'設定・基盤。街のインフラ。'};
 function besc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -522,12 +524,15 @@ function selectNode(id){
 function belowHeader(){return (document.querySelector('header').offsetHeight+10)+'px';}
 function showPanel(n){
   var note=(NOTES[n.id]||{})['_file']||'';
-  // 一文説明: アノテーション → 種別テンプレ（insights.jsonがあれば後で上書き）
-  var one=note||(ONE_LINERS[n.kind]||('「'+n.id.split('/').pop()+'」はこの街の'+n.kind+'.'));
+  // 一文説明: アノテーション → insights(_file/) → 種別テンプレ
+  var fi=INSIGHTS['_file/'+n.id]||{};
+  var one=note||fi.one||(ONE_LINERS[n.kind]||('「'+n.id.split('/').pop()+'」はこの街の'+n.kind+'.'));
   var symRows=(n.syms||[]).filter(function(s){return s.k!=='type'&&s.k!=='route';}).slice(0,40).map(function(s){
-    var fi=SYM_FANIN[n.id+'::'+s.n]||0;
-    return '<div class="sym" data-sym="'+besc(s.n)+'" title="'+s.l+(s.e?'–'+s.e:'')+'行 · クリックで呼び出しを追う"><i>·</i>'+besc(s.n)+
-      '<span>'+(fi?('×'+fi+' '):'')+s.l+'</span></div>';
+    var cf=SYM_FANIN[n.id+'::'+s.n]||0;
+    var si=INSIGHTS[n.id+'::'+s.n]||{};
+    return '<div class="sym" data-sym="'+besc(s.n)+'" title="'+(si.one||s.l+'行 · クリックで呼び出しを追う')+'"><i>·</i>'+besc(s.n)+
+      (si.one?'<em>'+besc(si.one)+'</em>':'')+
+      '<span>'+(cf?('×'+cf+' '):'')+s.l+'</span></div>';
   }).join('');
   panel.innerHTML='<h2><i class="chip" style="background:#'+n.color.toString(16).padStart(6,'0')+'"></i>'+besc(n.id)+'</h2>'+
     '<p class="one">'+besc(one)+'</p>'+
@@ -809,6 +814,9 @@ if (process.argv[1] && process.argv[1].endsWith('render3d.mjs')) {
   const nameMatch = base.match(/^city-(.*)\.json$/);
   let timeline = null;
   try { timeline = JSON.parse(fs.readFileSync(process.env.TIMELINE ?? (nameMatch ? `timeline-${nameMatch[1]}.json` : 'timeline.json'), 'utf8')); } catch { /* なしでも動く */ }
-  const r = render(city, { out, timeline });
-  console.log(`rendered ${out} (${(r.bytes / 1024).toFixed(0)}KB) in ${r.ms}ms${timeline ? ` +timeline(${timeline.frames?.length ?? 0}f)` : ''}`);
+  // insights: INSIGHTS env or insights.json。シンボル/ファイルの一文説明（手編集可）
+  let insights = {};
+  try { insights = JSON.parse(fs.readFileSync(process.env.INSIGHTS ?? 'insights.json', 'utf8')); } catch { /* なしでも動く */ }
+  const r = render(city, { out, timeline, insights });
+  console.log(`rendered ${out} (${(r.bytes / 1024).toFixed(0)}KB) in ${r.ms}ms${timeline ? ` +timeline(${timeline.frames?.length ?? 0}f)` : ''}${Object.keys(insights).length ? ` +insights(${Object.keys(insights).length})` : ''}`);
 }

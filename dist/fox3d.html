@@ -25,9 +25,10 @@ header h1{font-size:16px;letter-spacing:.04em}
 #panel h2{font-size:13px;word-break:break-all}
 #panel .row{display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed #d8cfb4}
 #panel .sec{margin-top:10px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;opacity:.6;border-bottom:1px solid #d8cfb4;padding-bottom:2px}
-#panel .sym{font-size:11px;padding:2px 0;cursor:pointer}
+#panel .sym{font-size:11px;padding:3px 0;cursor:pointer;border-bottom:1px dashed #e4dcc6}
 #panel .sym:hover{background:rgba(217,108,71,.12)}
 #panel .sym i{font-style:normal;color:var(--accent);margin-right:6px}
+#panel .sym em{display:block;font-style:normal;font-size:10.5px;line-height:1.5;opacity:.75;margin:2px 0 0 14px}
 #panel .sym span{opacity:.45;margin-left:auto;float:right}
 #panel .chip{display:inline-block;width:9px;height:9px;margin-right:6px;border:1px solid var(--ink);vertical-align:baseline}
 #panel .one{font-size:12px;line-height:1.55;margin:8px 0 4px}
@@ -77,6 +78,7 @@ var EDGES=[{"a":{"x":0,"z":12,"h":3.738880918220947},"b":{"x":8,"z":28,"h":24.22
 var CALLS=[{"f":"src/app/page.tsx","fs":"KitsunenPage","t":"src/types/index.ts","ts":"Restaurant"},{"f":"src/app/page.tsx","fs":"KitsunenPage","t":"src/types/index.ts","ts":"ThemeMode"},{"f":"src/app/page.tsx","fs":"KitsunenPage","t":"src/config/theme.ts","ts":"getTheme"},{"f":"src/app/page.tsx","fs":"KitsunenPage","t":"src/lib/supabase.ts","ts":"addRestaurant"},{"f":"src/app/page.tsx","fs":"KitsunenPage","t":"src/lib/supabase.ts","ts":"updateRestaurant"},{"f":"src/app/page.tsx","fs":"KitsunenPage","t":"src/lib/supabase.ts","ts":"deleteRestaurant"},{"f":"src/components/HoverDetail.tsx","fs":"HoverDetail","t":"src/config/theme.ts","ts":"getTheme"},{"f":"src/components/Map.tsx","fs":"Map","t":"src/types/index.ts","ts":"Restaurant"},{"f":"src/components/Map.tsx","fs":"Map","t":"src/config/theme.ts","ts":"mapboxStyles"},{"f":"src/components/Map.tsx","fs":"Map","t":"src/lib/supabase.ts","ts":"getRestaurants"},{"f":"src/components/RestaurantForm.tsx","fs":"RestaurantForm","t":"src/types/index.ts","ts":"SmokingType"},{"f":"src/components/RestaurantForm.tsx","fs":"RestaurantForm","t":"src/config/theme.ts","ts":"getTheme"},{"f":"src/components/RestaurantForm.tsx","fs":"RestaurantForm","t":"src/lib/supabase.ts","ts":"uploadRestaurantPhoto"},{"f":"src/components/ThemeToggle.tsx","fs":"ThemeToggle","t":"src/config/theme.ts","ts":"getTheme"},{"f":"src/config/theme.ts","fs":"getTheme","t":"src/config/theme.ts","ts":"lightTheme"},{"f":"src/config/theme.ts","fs":"getTheme","t":"src/config/theme.ts","ts":"darkTheme"},{"f":"src/config/theme.ts","fs":"lightTheme","t":"src/types/index.ts","ts":"ThemeColors"},{"f":"src/config/theme.ts","fs":"darkTheme","t":"src/types/index.ts","ts":"ThemeColors"},{"f":"src/config/theme.ts","fs":"getTheme","t":"src/types/index.ts","ts":"ThemeColors"},{"f":"src/config/theme.ts","fs":"getTheme","t":"src/types/index.ts","ts":"ThemeMode"},{"f":"src/data/dummyData.ts","fs":"dummyRestaurants","t":"src/types/index.ts","ts":"Restaurant"},{"f":"src/lib/supabase.ts","fs":"getRestaurants","t":"src/lib/supabase.ts","ts":"supabase"},{"f":"src/lib/supabase.ts","fs":"addRestaurant","t":"src/lib/supabase.ts","ts":"supabase"},{"f":"src/lib/supabase.ts","fs":"updateRestaurant","t":"src/lib/supabase.ts","ts":"supabase"},{"f":"src/lib/supabase.ts","fs":"deleteRestaurant","t":"src/lib/supabase.ts","ts":"supabase"},{"f":"src/lib/supabase.ts","fs":"deleteRestaurant","t":"src/lib/supabase.ts","ts":"deleteRestaurantPhoto"},{"f":"src/lib/supabase.ts","fs":"uploadRestaurantPhoto","t":"src/lib/supabase.ts","ts":"supabase"},{"f":"src/lib/supabase.ts","fs":"deleteRestaurantPhoto","t":"src/lib/supabase.ts","ts":"supabase"},{"f":"src/lib/supabase.ts","fs":"getRestaurants","t":"src/types/index.ts","ts":"Restaurant"},{"f":"src/lib/supabase.ts","fs":"addRestaurant","t":"src/types/index.ts","ts":"Restaurant"},{"f":"src/lib/supabase.ts","fs":"updateRestaurant","t":"src/types/index.ts","ts":"Restaurant"},{"f":"src/types/index.ts","fs":"Restaurant","t":"src/types/index.ts","ts":"SmokingType"}];
 var NOTES={};
 var TIMELINE={"repo":"fox","commitCount":26,"spanDays":4,"frames":[{"ts":1760765516,"date":"2025-10-18","hash":"4da2387e","msg":"feat: reset scaffold (dashboard + api stubs)","nFiles":8,"totalLoc":157,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":103}},{"ts":1760856541,"date":"2025-10-19","hash":"00d6eadb","msg":"redeploy","nFiles":16,"totalLoc":1939,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":149,"src/components/Map.tsx":208,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760856812,"date":"2025-10-19","hash":"1993f8c3","msg":"Fix Typescript errors","nFiles":16,"totalLoc":1939,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":149,"src/components/Map.tsx":208,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760857001,"date":"2025-10-19","hash":"734f2da7","msg":"Fix HoverDetail props type error","nFiles":16,"totalLoc":1940,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":208,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760857217,"date":"2025-10-19","hash":"9614db89","msg":"Fix Map null check error","nFiles":16,"totalLoc":1942,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760857454,"date":"2025-10-19","hash":"152d2373","msg":"Fix postal code error","nFiles":16,"totalLoc":1942,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760857664,"date":"2025-10-19","hash":"43abb2e0","msg":"Fix postal code name error","nFiles":16,"totalLoc":1942,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760858212,"date":"2025-10-19","hash":"05a35e9f","msg":"Fix","nFiles":16,"totalLoc":1942,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":237,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760858624,"date":"2025-10-19","hash":"3fa90cc7","msg":"modify stylesheet","nFiles":16,"totalLoc":1945,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":875,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760859583,"date":"2025-10-19","hash":"b56b1608","msg":"enhance function search lat and lng from address","nFiles":16,"totalLoc":1946,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":876,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760859751,"date":"2025-10-19","hash":"2fd185b3","msg":"semicolone","nFiles":16,"totalLoc":1946,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":876,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760859906,"date":"2025-10-19","hash":"a9a4bbe0","msg":"semicolone2","nFiles":16,"totalLoc":1946,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":876,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760860117,"date":"2025-10-19","hash":"897d04da","msg":"semicolone3","nFiles":16,"totalLoc":1954,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":884,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760860318,"date":"2025-10-19","hash":"0cb6032f","msg":"semicolone final","nFiles":16,"totalLoc":1947,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":877,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760861212,"date":"2025-10-19","hash":"9ea40242","msg":"reduce form selection","nFiles":16,"totalLoc":1813,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":743,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760861316,"date":"2025-10-19","hash":"4d7b20bb","msg":"delete unused codes","nFiles":16,"totalLoc":1798,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":728,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760861493,"date":"2025-10-19","hash":"d3041723","msg":"tsukareta","nFiles":16,"totalLoc":1817,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":747,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760862111,"date":"2025-10-19","hash":"ad61b5a2","msg":"change color","nFiles":16,"totalLoc":1817,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":240,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":747,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760862934,"date":"2025-10-19","hash":"30e0153e","msg":"improve view on smartphone","nFiles":16,"totalLoc":1823,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":246,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":747,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760863084,"date":"2025-10-19","hash":"05571879","msg":"refactoring","nFiles":16,"totalLoc":1829,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":252,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":747,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1760865762,"date":"2025-10-19","hash":"c96cee9a","msg":"font mordal fix","nFiles":16,"totalLoc":1778,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":252,"src/components/HoverDetail.tsx":150,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761138661,"date":"2025-10-22","hash":"df56ea38","msg":"feat:add edit and delete functionality","nFiles":16,"totalLoc":1849,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":252,"src/components/HoverDetail.tsx":221,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761139273,"date":"2025-10-22","hash":"e4cefdca","msg":"commitment error","nFiles":16,"totalLoc":1900,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":303,"src/components/HoverDetail.tsx":221,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761139766,"date":"2025-10-22","hash":"ccd84611","msg":"some bug watchin","nFiles":16,"totalLoc":1908,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":303,"src/components/HoverDetail.tsx":229,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761140282,"date":"2025-10-22","hash":"c4be558e","msg":"add alert","nFiles":16,"totalLoc":1909,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":303,"src/components/HoverDetail.tsx":230,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":136,"src/types/index.ts":39}},{"ts":1761140447,"date":"2025-10-22","hash":"666bb0ca","msg":"deploy","nFiles":16,"totalLoc":1962,"files":{"eslint.config.mjs":25,"next.config.ts":7,"postcss.config.mjs":5,"src/app/api/places/search/route.ts":2,"src/app/api/tags/normalize/route.ts":2,"src/app/dashboard/page.tsx":8,"src/app/layout.tsx":5,"src/app/page.tsx":303,"src/components/HoverDetail.tsx":229,"src/components/Map.tsx":210,"src/components/RestaurantForm.tsx":696,"src/components/ThemeToggle.tsx":50,"src/config/theme.ts":36,"src/data/dummyData.ts":155,"src/lib/supabase.ts":190,"src/types/index.ts":39}}]};
+var INSIGHTS={"_file/src/types/index.ts":{"one":"街全体の語彙を定める契約書。Restaurant型とテーマ型の唯一の出どころ。","what":"SmokingType・Restaurant・ThemeMode・ThemeColorsをexportする。全ビルがここを参照するためfan-in最大（8）。フィールド追加は街中への波及を伴う。","gen":"ox-alpha","date":"2026-08-26"},"_file/src/config/theme.ts":{"one":"ライト/ダーク両テーマの定義と、モードから色セットを引く窓口。","what":"lightTheme/darkTheme/mapboxStylesの3つの定数とgetTheme()。アクセント色はlight=ティール、dark=アンバーと対照的。MapboxスタイルURLもここで管理。","gen":"ox-alpha","date":"2026-08-26"},"_file/src/lib/supabase.ts":{"one":"Supabaseへの全DBアクセスを集約した公共施設。CRUDと写真アップロードの窓口。","what":"クライアントを1つ生成し、restaurants テーブルへの get/add/update/delete + 写真upload/delete を提供。スネークケース↔キャメルケースの変換もここで吸収する。UIはこのモジュール経由でのみDBに触る。","gen":"ox-alpha","date":"2026-08-26"},"src/config/theme.ts::getTheme":{"one":"テーマモード('light'|'dark')に対応する色セットを返す三項演算子のゲート。","what":"ThemeModeを受け取り lightTheme か darkTheme を返すだけの純関数。テーマ切替UIと地図スタイルの双方から呼ばれる。","gen":"ox-alpha","date":"2026-08-26"},"src/config/theme.ts::lightTheme":{"one":"ライトモードのカラーパレット（アクセント=ティール #00E3C5）。","what":"ThemeColors型の定数。bg白・accentティール。glowやnoiseOverlayまで含む9キー。","gen":"ox-alpha","date":"2026-08-26"},"src/config/theme.ts::darkTheme":{"one":"ダークモードのカラーパレット（アクセント=アンバー #F8B400）。","what":"ThemeColors型の定数。bg #1A1A1A・accentアンバー。夜の喫煙マップらしい発光表現(glow)が強め。","gen":"ox-alpha","date":"2026-08-26"},"src/config/theme.ts::mapboxStyles":{"one":"テーマモードに対応するMapboxスタイルURLの対応表。","what":"light→light-v11、dark→dark-v11。MapコンポーネントがsetStyle()で差し替えるのに使う。","gen":"ox-alpha","date":"2026-08-26"},"src/lib/supabase.ts::supabase":{"one":"アプリで唯一のSupabaseクライアントインスタンス。","what":"NEXT_PUBLIC_SUPABASE_URL/ANON_KEYからcreateClient。anon keyなのでRLS前提。全DB関数の土台。","gen":"ox-alpha","date":"2026-08-26"},"src/lib/supabase.ts::getRestaurants":{"one":"restaurantsテーブルを全件・新着順で取得しRestaurant型に整形する。","what":"select('*') → created_at降順 → スネークケースをキャメルケースへマップ。エラー時は空配列を返す（throwしない）ので呼び出し側は失敗を区別できない。","gen":"ox-alpha","date":"2026-08-26"},"src/lib/supabase.ts::addRestaurant":{"one":"新しい飲食店を1件insertする。","what":"Omit<Restaurant,'id'|'createdAt'>を受け取りスネークケースに変換してinsert+select。エラー時はthrow。新規投稿フローの終端。","gen":"ox-alpha","date":"2026-08-26"},"src/lib/supabase.ts::updateRestaurant":{"one":"既存の飲食店情報をid指定でupdateする。","what":"addRestaurantと同じフィールド変換でupdate。編集フローから使う。","gen":"ox-alpha","date":"2026-08-26"},"src/lib/supabase.ts::deleteRestaurant":{"one":"id指定で飲食店を1件削除する。","what":"delete().eq('id', id)。削除フローの終端。写真は残る（photo_urlは外部ストレージ参照のまま）。","gen":"ox-alpha","date":"2026-08-26"},"src/lib/supabase.ts::uploadRestaurantPhoto":{"one":"店の写真をSupabase Storageにアップロードし公開URLを返す。","what":"フォームからBlobを受け取りstorageへput、getPublicUrlでURL化。photo_url列にはこの戻り値が入る。","gen":"ox-alpha","date":"2026-08-26"},"src/lib/supabase.ts::deleteRestaurantPhoto":{"one":"Storage上の店写真を削除する。","what":"uploadの逆操作。店削除時に写真を掃除したい場合のために用意。","gen":"ox-alpha","date":"2026-08-26"},"src/components/RestaurantForm.tsx::RestaurantForm":{"one":"店の新規登録・編集を行うモーダルフォーム。697 LOCの最大ビル。","what":"名前(日英)・喫煙タイプ・住所・電話・営業時間・写真を扱う。位置はMapのピッカーモードで選ぶ。submit時にaddRestaurant/updateRestaurantへ流す。テーマ対応のためgetThemeも参照。","gen":"ox-alpha","date":"2026-08-26"},"src/components/HoverDetail.tsx::HoverDetail":{"one":"地図上で店にホバーした時に出る小さな情報カード。","what":"Restaurantを受け取り名称(日英)・喫煙タイプ・住所を簡易表示する。クリック詳細への導線。テーマ色はgetTheme経由。","gen":"ox-alpha","date":"2026-08-26"},"src/components/Map.tsx::Map":{"one":"Mapbox GLの地図本体。店ピン表示・クリック選択・位置ピックを担う舞台。","what":"useEffectでmapbox-glを初期化し、themeModeの変更でスタイルを差し替える。propsでonRestaurantClick/onLocationPick/ピッカーモードを受け、getRestaurantsの結果をピンとして載せる。","gen":"ox-alpha","date":"2026-08-26"},"src/components/ThemeToggle.tsx::ThemeToggle":{"one":"ライト/ダークを切り替えるトグルボタン。","what":"ThemeModeのstateを持つ親から setMode を渡されて動く薄いUI。切り替えはgetThemeとmapboxStyles双方に波及する。","gen":"ox-alpha","date":"2026-08-26"},"src/app/page.tsx::KitsunenPage":{"one":"トップページ。地図・検索・フォーム・テーマを束ねる街の玄関。","what":"'use client'のルートコンポーネント。getRestaurantsで店一覧を読み、Map/HoverDetail/RestaurantForm/ThemeToggleを組み合わせて状態管理する。typesのRestaurant/ThemeModeを最も広く消費する。","gen":"ox-alpha","date":"2026-08-26"},"src/data/dummyData.ts::dummyRestaurants":{"one":"DB接続なしで動かすためのダミーデータ配列。","what":"Restaurant[]の固定データ。開発・デモ時のフォールバック。実DB移行後は役目を終える予定の置き土産。","gen":"ox-alpha","date":"2026-08-26"}};
 // 種別ごとの一文説明（アノテーションがなければこれ。insightsで上書き前提のフォールバック）
 var ONE_LINERS={page:'ユーザーが触る画面。この街の表玄関。',component:'UIの部品。画面を組み上げるレンガ。',api:'外の世界との窓口。リクエストを受け処理を依頼する。',hook:'状態と副作用を束ねる、Reactの神経。',lib:'横串のロジック。各棟から呼ばれる公共施設。',type:'データの契約書。街中の会話の語彙を定める。',test:'品質の門番。',module:'設定・基盤。街のインフラ。'};
 function besc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
@@ -205,9 +207,90 @@ function updateEdgeHeights(){
       new THREE.Vector3(ma.position.x,ha,ma.position.z),
       new THREE.Vector3((ma.position.x+mb.position.x)/2,Math.max(ha,hb)+16,(ma.position.z+mb.position.z)/2),
       new THREE.Vector3(mb.position.x,hb,mb.position.z));
+    e.curve=curve; // パケットが弧上を歩くのに使う
     e.m.geometry=new THREE.TubeGeometry(curve,20,e.ra,5,false);
   }
 }
+
+// ---- パケット: ワイヤ上を流れる点（ウォーク=呼び出し連鎖の追跡 / 常時=fan-in上位の静かな流れ） ----
+const packetGroup=new THREE.Group();cityGroup.add(packetGroup);
+function makePacket(color,size){
+  const m=new THREE.Mesh(new THREE.SphereGeometry(size||0.55,10,8),new THREE.MeshBasicMaterial({color:color||0xd96c47}));
+  m.visible=false;
+  packetGroup.add(m);
+  return m;
+}
+// edgeKey(aFile,bFile)→liveEdge。方向はa→b固定だがcurveは逆走できる
+var edgeByKey=null;
+function findEdge(fa,fb){
+  if(!edgeByKey){
+    edgeByKey={};
+    for(const le of liveEdges){
+      const A=le.m.userData.aM,B=le.m.userData.bM;
+      if(!A||!B)continue;
+      edgeByKey[A.userData.node.id+'|'+B.userData.node.id]=le;
+    }
+  }
+  return edgeByKey[fa+'|'+fb]||edgeByKey[fb+'|'+fa];
+}
+// ウォーク: 選択関数からcalls連鎖をDFS（深さ≤5・訪問済み抑止）→経路の弧リストを作る
+var walk=null; // {hops:[{le,rev,t}], i, t, flash:[mesh...]}
+function buildRoute(file,fn){
+  const adj={}; // key: file::fn → 隣接ノード配列
+  for(const c of CALLS){
+    const k=c.f+'::'+c.fs;
+    (adj[k]=adj[k]||[]).push({f:c.t,fs:c.ts});
+    // 呼ばれ側からの逆辺も探索に含める（誰が自分を呼んでるかも追える）
+    (adj[c.t+'::'+c.ts]=adj[c.t+'::'+c.ts]||(adj[c.t+'::'+c.ts]=[])).push({f:c.f,fs:c.fs,back:true});
+  }
+  const seen=new Set([file+'::'+fn]);
+  const route=[];
+  function dfs(f,fn,depth){
+    if(depth>=5)return;
+    for(const nx of (adj[f+'::'+fn])||[]){
+      const key=nx.f+'::'+nx.fs;
+      if(seen.has(key))continue;
+      seen.add(key);
+      const le=findEdge(f,nx.f);
+      if(le){route.push({le:le,aF:f,bF:nx.f});}
+      dfs(nx.f,nx.fs,depth+1);
+      if(route.length>=12)return; // 経路は最大12ホップで十分読める
+    }
+  }
+  dfs(file,fn,0);
+  return route;
+}
+function startWalk(file,fn){
+  stopWalk();
+  const hops=buildRoute(file,fn).map(function(h,i){
+    return {le:h.le,aF:h.aF,t:-i*0.45}; // 負のt=開始待ち（前のパケットが弧の中腹で次が発車）
+  });
+  walk={hops:hops};
+  window.__walkState=function(){return {hops:hops.length,active:hops.filter(function(h){return h.t>=0&&h.t<1}).length,done:hops.filter(function(h){return h.t>=1}).length};};
+}
+window.__packets=function(){ // QA用: 流動中パケット数
+  var v=0;for(var i=0;i<packetGroup.children.length;i++)if(packetGroup.children[i].visible)v++;
+  return {visible:v,ambient:ambient.length};
+};
+function stopWalk(){
+  walk=null;
+  window.__walkState=function(){return null;};
+}
+// 常時パケット: fan-in上位ワイヤを静かに流す（量は少なく）
+var ambient=[];
+function seedAmbient(){
+  const byFan=[...NODES].sort((a,b)=>b.fanIn-a.fanIn).slice(0,6); // fan-in上位6ビルに入る線
+  let n=0;
+  for(const le of liveEdges){
+    const A=le.m.userData.aM,B=le.m.userData.bM;
+    if(!A||!B)continue;
+    if(byFan.some(nd=>nd.id===B.userData.node.id)){
+      ambient.push({le:le,m:makePacket(0xb3ab92,0.4),t:Math.random(),speed:0.0016+Math.random()*0.0012});
+      if(++n>=10)break; // 同時に流れるのは10個まで
+    }
+  }
+}
+seedAmbient();
 
 // ---- カメラ操作（ドラッグ=パン / 右・⌘+Ctrl+ドラッグ=回転）----
 let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(8.0,0,14.0);
@@ -337,12 +420,15 @@ function selectNode(id){
 function belowHeader(){return (document.querySelector('header').offsetHeight+10)+'px';}
 function showPanel(n){
   var note=(NOTES[n.id]||{})['_file']||'';
-  // 一文説明: アノテーション → 種別テンプレ（insights.jsonがあれば後で上書き）
-  var one=note||(ONE_LINERS[n.kind]||('「'+n.id.split('/').pop()+'」はこの街の'+n.kind+'.'));
+  // 一文説明: アノテーション → insights(_file/) → 種別テンプレ
+  var fi=INSIGHTS['_file/'+n.id]||{};
+  var one=note||fi.one||(ONE_LINERS[n.kind]||('「'+n.id.split('/').pop()+'」はこの街の'+n.kind+'.'));
   var symRows=(n.syms||[]).filter(function(s){return s.k!=='type'&&s.k!=='route';}).slice(0,40).map(function(s){
-    var fi=SYM_FANIN[n.id+'::'+s.n]||0;
-    return '<div class="sym" data-sym="'+besc(s.n)+'" title="'+s.l+(s.e?'–'+s.e:'')+'行 · クリックで呼び出しを追う"><i>·</i>'+besc(s.n)+
-      '<span>'+(fi?('×'+fi+' '):'')+s.l+'</span></div>';
+    var cf=SYM_FANIN[n.id+'::'+s.n]||0;
+    var si=INSIGHTS[n.id+'::'+s.n]||{};
+    return '<div class="sym" data-sym="'+besc(s.n)+'" title="'+(si.one||s.l+'行 · クリックで呼び出しを追う')+'"><i>·</i>'+besc(s.n)+
+      (si.one?'<em>'+besc(si.one)+'</em>':'')+
+      '<span>'+(cf?('×'+cf+' '):'')+s.l+'</span></div>';
   }).join('');
   panel.innerHTML='<h2><i class="chip" style="background:#'+n.color.toString(16).padStart(6,'0')+'"></i>'+besc(n.id)+'</h2>'+
     '<p class="one">'+besc(one)+'</p>'+
@@ -357,8 +443,7 @@ function showPanel(n){
   panel.dataset.nodeId=n.id;
   panel.style.display='block';
 }
-// 関数クリック → 呼び出しウォーク（実装はP3。ここはUI配線）
-var startWalk=function(file,fn){console.log('[walk stub]',file,fn);};
+// 関数クリック → 呼び出しウォーク（startWalk本体はパケットセクションでfunction宣言済み）
 panel.addEventListener('click',function(e){
   var sym=e.target.closest('.sym');
   if(sym&&sym.getAttribute('data-sym'))startWalk(panel.dataset.nodeId,sym.getAttribute('data-sym'));
@@ -424,6 +509,7 @@ window.addEventListener('keydown',function(e){
 
 // レンダーループ（回転慣性なし、必要時のみ描画で省電力）
 var timeAnims=[],breathT=0,timeMarkers=[]; // 誕生アニメ: {m,h0,h1,t} / リング呼吸位相 / タイムバーマーカー
+var reduceMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 function loop(){
   requestAnimationFrame(loop);
   // 誕生アニメ進行（cubic-out、0.5s）
@@ -443,6 +529,37 @@ function loop(){
       mk.scale.set(br,1,br);
       mk.material.opacity=0.65+Math.sin(breathT*2.6)*0.25;
     }
+  }
+  // 常時パケット: 弧上をゆっくり（reduced-motion尊重）
+  if(!reduceMotion){
+    for(const ap of ambient){
+      ap.t=(ap.t+ap.speed)%1;
+      if(!ap.le.m.visible||!ap.le.curve){ap.m.visible=false;continue;}
+      const A=ap.le.m.userData.aM,B=ap.le.m.userData.bM;
+      const rev=A.userData.node.fanIn<B.userData.node.fanIn; // fan-in弱い方から強い方へ流す
+      const p=rev?ap.le.curve.getPoint(1-ap.t):ap.le.curve.getPoint(ap.t);
+      ap.m.position.copy(p);ap.m.visible=true;
+    }
+    // ウォークパケット: 順番に発車、弧を1秒で走る
+    if(walk){
+      let allDone=true;
+      for(const h of walk.hops){
+        if(h.pk)h.pk.visible=false; // 毎フレーム一旦消す（完了・待機を単純に）
+        h.t+=0.02;
+        if(h.t<0){allDone=false;continue;} // まだ発車しない
+        if(h.t>=1)continue;               // 完着
+        allDone=false;
+        if(!h.pk)h.pk=makePacket(0xd96c47,0.7);
+        if(!h.le.m.visible||!h.le.curve)continue;
+        const A=h.le.m.userData.aM,B=h.le.m.userData.bM;
+        const rev=A.userData.node.id!==h.aF; // aF側が始点になるよう向き決め
+        const p=rev?h.le.curve.getPoint(1-h.t):h.le.curve.getPoint(h.t);
+        h.pk.position.copy(p);h.pk.visible=true;
+      }
+      if(allDone)stopWalk();
+    }
+  } else {
+    packetGroup.visible=false;
   }
   renderer.render(scene,camera);
 }
