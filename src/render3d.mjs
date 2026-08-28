@@ -400,6 +400,32 @@ seedAmbient();
 let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(${CITY_CX},0,${CITY_CZ});
 window.__cam=function(){return {yaw,pitch,zoom,target:{x:target.x,z:target.z}}}; // QA用
 window.__select=function(id){selectNode(id);return window.__sel?window.__sel():{sel:id}}; // QA用
+window.__setCam=function(c){if(!c)return;yaw=c.yaw;pitch=c.pitch;zoom=c.zoom;if(c.target){target.x=c.target.x;target.z=c.target.z;}updateCamera();}; // ホスト(VS Code等)からの視点復元
+function notifyHost(id){if(window.__onSelect)try{window.__onSelect(id)}catch(e){}} // ユーザ操作による選択だけを外へ通知する
+window.__sel=function(){ // QA用: 選択ハイライト状態（タイムライン有無に関わらず生やす）
+  if(!selected)return {sel:null};
+  var hot=0,dim=0;
+  for(var i=0;i<liveEdges.length;i++){
+    var le=liveEdges[i];
+    if(!le.m.visible)continue;
+    var U=le.m.userData;
+    if((U.aM===selected||U.bM===selected)&&le.m.material.color.getHexString()==='d96c47')hot++;
+    else if(le.m.material.opacity<U.op)dim++;
+  }
+  return {sel:selected.userData.node.id,outline:'#'+selected.children[0].material.color.getHexString(),
+    emissive:'#'+selected.material.emissive.getHexString(),hotWires:hot,dimmedWires:dim};
+};
+window.__edges=function(){ // QA用: ワイヤ追従状態
+  var vis=0,bad=0;
+  for(var i=0;i<liveEdges.length;i++){
+    var e=liveEdges[i];
+    if(!e.m.visible)continue;
+    vis++;
+    var A=e.m.userData.aM,B=e.m.userData.bM;
+    if(Math.abs(e.ha-A.scale.y)>0.05||Math.abs(e.hb-B.scale.y)>0.05)bad++;
+  }
+  return {total:liveEdges.length,visible:vis,detached:bad};
+};
 function updateCamera(){
   const d=140; // 正射影なので距離は固定、zoomで拡縮
   camera.position.set(
@@ -565,7 +591,7 @@ cv.addEventListener('pointerup',function(e){
   pointer.y=-(e.clientY/innerHeight)*2+1;
   raycaster.setFromCamera(pointer,camera);
   var hits=raycaster.intersectObjects(pickables,false);
-  if(hits.length)selectNode(hits[0].object.userData.node.id);
+  if(hits.length){var hitId=hits[0].object.userData.node.id;selectNode(hitId);notifyHost(hitId);}
   else {selectNode(null);panel.style.display='none';}
   downPos=null;
 });
@@ -581,7 +607,7 @@ cv.addEventListener('pointermove',function(e){
 // 検索ジャンプ（フォーカス）
 function focusNode(id){
   var m=meshes[id];if(!m)return;
-  selectNode(id);
+  selectNode(id);notifyHost(id);
   target.set(m.position.x,0,m.position.z);
   zoom=Math.max(zoom,2.2);
   updateCamera();
@@ -732,30 +758,6 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
   }
   function ratioOf(n,loc){return Math.max(loc,1)/Math.max(n.loc,1);}
   window.__applyTimeframe=applyFrame; // QA用
-  window.__sel=function(){ // QA用: 選択ハイライト状態
-    if(!selected)return {sel:null};
-    var hot=0,dim=0;
-    for(var i=0;i<liveEdges.length;i++){
-      var le=liveEdges[i];
-      if(!le.m.visible)continue;
-      var U=le.m.userData;
-      if((U.aM===selected||U.bM===selected)&&le.m.material.color.getHexString()==='d96c47')hot++;
-      else if(le.m.material.opacity<U.op)dim++;
-    }
-    return {sel:selected.userData.node.id,outline:'#'+selected.children[0].material.color.getHexString(),
-      emissive:'#'+selected.material.emissive.getHexString(),hotWires:hot,dimmedWires:dim};
-  };
-  window.__edges=function(){ // QA用: ワイヤ追従状態
-    var vis=0,bad=0;
-    for(var i=0;i<liveEdges.length;i++){
-      var e=liveEdges[i];
-      if(!e.m.visible)continue;
-      vis++;
-      var A=e.m.userData.aM,B=e.m.userData.bM;
-      if(Math.abs(e.ha-A.scale.y)>0.05||Math.abs(e.hb-B.scale.y)>0.05)bad++;
-    }
-    return {total:liveEdges.length,visible:vis,detached:bad};
-  };
   window.__nodes=function(){ // QA用: 各ビルの材質色・高さ・画面座標
     var out=[];
     for(var k in meshes){
