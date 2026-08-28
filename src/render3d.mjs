@@ -13,7 +13,9 @@ const KIND_COLORS = {
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
 // --- レイアウト計算。render()とwebviewの差分更新(__applyScene)で同じ結果を使う ---
-export function layout(city) {
+// prev に前回の結果を渡すと、区画の並び・幅・区画内の位置を引き継ぐ。
+// 1ファイル編集しただけで街全体が動くのを防ぐため（保存のたびに地図が変わると読めない）。
+export function layout(city, prev = null) {
   const nodes = city.nodes;
   // --- レイアウト（密集街区: 建物はタイル整数座標にスナップ。道幅1タイル） ---
   const TILE = 4; // グリッド1マス=4世界単位。全座標はTILE整数倍でグリッド線に吸着させる
@@ -22,30 +24,113 @@ export function layout(city) {
     if (!districts.has(n.district)) districts.set(n.district, []);
     districts.get(n.district).push(n);
   }
-  const names = [...districts.keys()].sort((a, b) =>
-    (districts.get(b).length - districts.get(a).length) || (a < b ? -1 : 1));
+  const bySize = (a, b) => (districts.get(b).length - districts.get(a).length) || (a < b ? -1 : 1);
+
+  // 区画の並び: 前回の順序を保ち、新しい区画だけ後ろに足す。
+  // 件数順で毎回並べ直すと、1ファイル増えただけで区画の順位が入れ替わって街ごと動く。
+  let names;
+  if (prev && prev.districtOrder) {
+    const alive = new Set(districts.keys());
+    const known = new Set(prev.districtOrder);
+    names = prev.districtOrder.filter(n => alive.has(n))
+      .concat([...districts.keys()].filter(n => !known.has(n)).sort(bySize));
+  } else {
+    names = [...districts.keys()].sort(bySize);
+  }
+
   const pos = new Map();
   const plates = []; // { name, ox, oy, cols, rows } すべてタイル単位
   const GAP = 1;
-  const shapeOf = count => {
-    const cols = Math.max(1, Math.ceil(Math.sqrt(count)));
-    return { cols, rows: Math.ceil(count / cols) };
+  const squareCols = count => Math.max(1, Math.ceil(Math.sqrt(count)));
+
+  // 区画の幅: 前回の幅をそのまま使う（縦に伸びるだけなら既存の位置は動かない）。
+  // 極端に細長くなったときだけ引き直す。
+  const prevCols = (prev && prev.districtCols) || {};
+  const colsOf = (name, count) => {
+    const want = squareCols(count);
+    const keep = prevCols[name];
+    if (!keep) return want;
+    const rows = Math.ceil(count / keep);
+    if (rows > keep * 2 || (keep > 2 && keep > rows * 2)) return want; // 縦横比が崩れたら引き直す
+    return keep;
   };
-  const widest = Math.max(...names.map(n => shapeOf(districts.get(n).length).cols));
-  const shelfCols = Math.max(Math.ceil(Math.sqrt(nodes.length)), widest);
-  let ox = 0, oy = 0, rowRows = 0;
-  names.forEach(name => {
+  const colsByName = {};
+  for (const name of names) colsByName[name] = colsOf(name, districts.get(name).length);
+
+  const widest = Math.max(...names.map(n => colsByName[n]));
+  // 棚の幅も引き継ぐ。総ファイル数のsqrtで毎回決めると、増えるたびに折り返しが変わる
+  const shelfCols = Math.max((prev && prev.shelfCols) || Math.ceil(Math.sqrt(nodes.length)), widest);
+
+  // --- 区画内のセル割り当て（区画の位置とは独立に決まる） ---
+  const prevPos = (prev && prev.cells) || {}; // id -> {d, c, r} 区画内のセル
+  const cells = {};
+  const shape = {}; // name -> {cols, rows}
+  for (const name of names) {
+    const cols = colsByName[name];
     const files = districts.get(name).sort((a, b) => (b.fanIn - a.fanIn) || (b.loc - a.loc));
-    const { cols, rows } = shapeOf(files.length);
-    if (ox > 0 && ox + cols > shelfCols) { ox = 0; oy += rowRows + GAP; rowRows = 0; }
-    files.forEach((n, j) => {
-      const c = ox + (j % cols), r = oy + Math.floor(j / cols);
-      pos.set(n.id, { x: c * TILE, z: r * TILE }); // 整数タイル → グリッド境界に吸着
-    });
-    plates.push({ name, ox, oy, cols, rows });
-    ox += cols + GAP;
-    rowRows = Math.max(rowRows, rows);
-  });
+    // 前回と同じ区画にいて、幅の中に収まっているファイルはセルを据え置く
+    const taken = new Set();
+    const placed = new Map(); // id -> {c, r}
+    for (const n of files) {
+      const p = prevPos[n.id];
+      if (!p || p.d !== name || p.c >= cols) continue;
+      const key = p.c + ',' + p.r;
+      if (taken.has(key)) continue; // 念のため（重複は先着優先）
+      taken.add(key); placed.set(n.id, { c: p.c, r: p.r });
+    }
+    // 残り（新規ファイル・区画をまたいで来たファイル）は空きセルへ詰める
+    let scan = 0;
+    for (const n of files) {
+      if (placed.has(n.id)) continue;
+      for (;; scan++) {
+        const c = scan % cols, r = Math.floor(scan / cols);
+        if (taken.has(c + ',' + r)) continue;
+        taken.add(c + ',' + r); placed.set(n.id, { c, r }); scan++;
+        break;
+      }
+    }
+    let rows = 1;
+    for (const n of files) {
+      const cell = placed.get(n.id);
+      cells[n.id] = { d: name, c: cell.c, r: cell.r };
+      rows = Math.max(rows, cell.r + 1);
+    }
+    shape[name] = { cols, rows };
+  }
+
+  // --- 区画の枠（棚詰め）---
+  // 区画には少し縦の余白を付けて枠を確保しておく。枠に収まっているうちは位置を動かさない。
+  // 1区画でも枠からはみ出したときだけ、全体を詰め直す（そこでまた余白を取り直す）。
+  const SLACK = 4; // 枠の高さは4タイル単位。この範囲の増減では街が動かない
+  const prevSlots = (prev && prev.slots) || {};
+  let reuse = names.length > 0;
+  for (const name of names) {
+    const sl = prevSlots[name];
+    if (!sl || sl.cols !== shape[name].cols || shape[name].rows > sl.rowsCap) { reuse = false; break; }
+  }
+  const slots = {};
+  if (reuse) {
+    for (const name of names) slots[name] = { ...prevSlots[name] };
+  } else {
+    let ox = 0, oy = 0, rowH = 0;
+    for (const name of names) {
+      const { cols, rows } = shape[name];
+      const rowsCap = (Math.floor(rows / SLACK) + 1) * SLACK; // 必ず1〜4行ぶんの余白を残す
+      if (ox > 0 && ox + cols > shelfCols) { ox = 0; oy += rowH + GAP; rowH = 0; } // 棚から溢れたら改行
+      slots[name] = { ox, oy, cols, rowsCap };
+      ox += cols + GAP;
+      rowH = Math.max(rowH, rowsCap);
+    }
+  }
+
+  for (const name of names) {
+    const { ox, oy } = slots[name];
+    for (const n of districts.get(name)) {
+      const cell = cells[n.id];
+      pos.set(n.id, { x: (ox + cell.c) * TILE, z: (oy + cell.r) * TILE }); // 整数タイル → グリッド境界に吸着
+    }
+    plates.push({ name, ox, oy, cols: shape[name].cols, rows: shape[name].rows });
+  }
 
   const maxLoc = Math.max(...nodes.map(n => n.loc), 1);
   const maxFan = Math.max(...nodes.map(n => n.fanIn), 1);
@@ -92,12 +177,17 @@ export function layout(city) {
       };
     }).filter(Boolean);
 
-  return { TILE, NODES: sceneData, EDGES: edges, PLATES: plateData, CALLS, CITY_CX, CITY_CZ, stats: city.stats };
+  return {
+    TILE, NODES: sceneData, EDGES: edges, PLATES: plateData, CALLS, CITY_CX, CITY_CZ,
+    stats: city.stats,
+    // 次回に引き継ぐ配置情報（描画には使わない）
+    districtOrder: names, districtCols: colsByName, shelfCols, cells, slots,
+  };
 }
 
 export function render(city, opts = {}) {
   const t0 = performance.now();
-  const { TILE, NODES: sceneData, EDGES: edges, PLATES: plateData, CALLS, CITY_CX, CITY_CZ } = layout(city);
+  const { TILE, NODES: sceneData, EDGES: edges, PLATES: plateData, CALLS, CITY_CX, CITY_CZ } = opts.layout ?? layout(city, opts.prevLayout ?? null);
 
   const stats = city.stats;
   const kindLegend = Object.entries(KIND_COLORS).map(([k, c]) =>

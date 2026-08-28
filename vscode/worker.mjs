@@ -7,6 +7,7 @@ import { createSession } from '../src/extract.mjs';
 import { layout, render } from '../src/render3d.mjs';
 
 let session = null;
+let lastLayout = null; // 前回のレイアウト。引き継ぐことで保存のたびに街が動かないようにする
 
 // timeline-<repo>.json / insights.json がリポジトリ直下にあれば拾う（無くても動く）
 function sidecars(root) {
@@ -29,15 +30,17 @@ process.on('message', (m) => {
       // 差分更新: HTMLを作り直さず、レイアウト結果だけwebviewへ送る
       const t = performance.now();
       const city = session.city();
+      lastLayout = layout(city, lastLayout);
       process.send({
-        id: m.id, type: 'scene', data: layout(city),
+        id: m.id, type: 'scene', data: lastLayout,
         ms: Math.round(performance.now() - t),
       });
     } else if (m.type === 'render') {
       const t = performance.now();
       const city = session.city();
       const { timeline, insights } = sidecars(session.root);
-      const r = render(city, { out: null, timeline, insights });
+      lastLayout = layout(city, lastLayout);
+      const r = render(city, { out: null, layout: lastLayout, timeline, insights });
       process.send({
         id: m.id, type: 'html', html: r.html, stats: city.stats,
         ms: Math.round(performance.now() - t),
