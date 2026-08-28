@@ -3,7 +3,7 @@
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { extract } from './extract.mjs';
+import { createSession } from './extract.mjs';
 import { render } from './render.mjs';
 
 const [repo, portArg] = process.argv.slice(2);
@@ -22,15 +22,27 @@ try { TIMELINE = JSON.parse(fs.readFileSync(process.env.TIMELINE ?? `timeline-${
 const OUT_HTML = 'dist/live.html';
 let clients = new Set();
 let rebuildTimer = null;
+const pending = new Set(); // デバウンス中に変更されたファイル
+
+// 差分抽出セッション: 起動時に1回だけ全量解析し、以降は変更ファイルだけ再解析する
+const t0init = performance.now();
+const session = createSession(repo);
+console.log(`indexed ${session.size()} files in ${Math.round(performance.now() - t0init)}ms (差分抽出モード)`);
 
 function rebuild(reason) {
   const t0 = performance.now();
   try {
-    const city = extract(repo);
+    let parseMs = 0;
+    for (const f of pending) {
+      const u = session.update(path.join(repo, f));
+      if (u) parseMs += u.parseMs;
+    }
+    pending.clear();
+    const city = session.city();
     fs.mkdirSync('dist', { recursive: true });
     // renderにlive注入フラグを渡すため一時的にscriptを足す
     const r = renderLive(city, OUT_HTML, ANNOTATIONS, TIMELINE);
-    console.log(`[${new Date().toLocaleTimeString('ja-JP')}] rebuilt (${reason}): ${city.stats.files} files, ${city.stats.edges} edges — extract+render ${Math.round(performance.now() - t0)}ms`);
+    console.log(`[${new Date().toLocaleTimeString('ja-JP')}] rebuilt (${reason}): ${city.stats.files} files, ${city.stats.edges} edges — parse ${parseMs.toFixed(1)}ms + 全体 ${Math.round(performance.now() - t0)}ms`);
     for (const res of clients) res.write(`data: reload\n\n`);
   } catch (err) {
     // 編集中の構文エラーなどは静かに無視（前回の地図を表示し続ける）
@@ -52,6 +64,7 @@ fs.watch(repo, { recursive: true }, (_ev, filename) => {
   const f = String(filename);
   if (!/\.(ts|tsx|js|jsx|mjs|cjs)$/.test(f)) return;
   if (f.includes('node_modules') || f.includes('.next')) return;
+  pending.add(f);
   clearTimeout(rebuildTimer);
   rebuildTimer = setTimeout(() => rebuild(f), 150); // デバウンス
 });

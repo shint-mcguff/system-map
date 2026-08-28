@@ -1,0 +1,137 @@
+{
+  "name": "system-map",
+  "displayName": "System Map",
+  "description": "コードベースをアイソメ3D都市として横に並べて見る",
+  "version": "0.2.0",
+  "publisher": "shint-mcguff",
+  "license": "ISC",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization"
+  ],
+  "main": "./extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "systemMap",
+          "title": "System Map",
+          "icon": "media/city.svg"
+        }
+      ]
+    },
+    "views": {
+      "systemMap": [
+        {
+          "type": "webview",
+          "id": "systemMap.city",
+          "name": "街",
+          "contextualTitle": "System Map"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "systemMap.open",
+        "title": "街を開く",
+        "category": "System Map",
+        "icon": "$(map)"
+      },
+      {
+        "command": "systemMap.openInEditor",
+        "title": "エディタ列で開く",
+        "category": "System Map",
+        "icon": "$(link-external)"
+      },
+      {
+        "command": "systemMap.reveal",
+        "title": "このファイルのビルへ",
+        "category": "System Map",
+        "icon": "$(target)"
+      },
+      {
+        "command": "systemMap.reindex",
+        "title": "解析しなおす",
+        "category": "System Map",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "systemMap.openInSidebar",
+        "title": "サイドバーで開く",
+        "category": "System Map",
+        "icon": "$(layout-sidebar-right)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "systemMap.reveal",
+          "when": "view == systemMap.city",
+          "group": "navigation@1"
+        },
+        {
+          "command": "systemMap.openInEditor",
+          "when": "view == systemMap.city",
+          "group": "navigation@2"
+        },
+        {
+          "command": "systemMap.reindex",
+          "when": "view == systemMap.city",
+          "group": "navigation@3"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "systemMap.reveal",
+          "when": "workspaceFolderCount != 0"
+        },
+        {
+          "command": "systemMap.reindex",
+          "when": "workspaceFolderCount != 0"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "systemMap.reveal",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "System Map",
+      "properties": {
+        "systemMap.updateOnSave": {
+          "type": "boolean",
+          "default": true,
+          "description": "保存したファイルだけを再解析して街を更新する"
+        },
+        "systemMap.followActiveEditor": {
+          "type": "boolean",
+          "default": true,
+          "description": "アクティブなエディタに対応するビルを自動で選択する"
+        },
+        "systemMap.openFileOnClick": {
+          "type": "boolean",
+          "default": true,
+          "description": "ビルをクリックしたら対応するファイルをエディタで開く"
+        },
+        "systemMap.openLocation": {
+          "type": "string",
+          "enum": [
+            "editor",
+            "sidebar"
+          ],
+          "enumDescriptions": [
+            "エディタの右列に開く（横に広く使える。既定）",
+            "アクティビティバーのビューに開く（右サイドバーへ動かすと常設の列にできる）"
+          ],
+          "default": "editor",
+          "description": "「街を開く」でどこに表示するか"
+        }
+      }
+    }
+  }
+}

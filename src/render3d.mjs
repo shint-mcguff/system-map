@@ -12,10 +12,11 @@ const KIND_COLORS = {
 };
 function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-export function render(city, opts = {}) {
-  const t0 = performance.now();
+// --- レイアウト計算。render()とwebviewの差分更新(__applyScene)で同じ結果を使う ---
+// prev に前回の結果を渡すと、区画の並び・幅・区画内の位置を引き継ぐ。
+// 1ファイル編集しただけで街全体が動くのを防ぐため（保存のたびに地図が変わると読めない）。
+export function layout(city, prev = null) {
   const nodes = city.nodes;
-
   // --- レイアウト（密集街区: 建物はタイル整数座標にスナップ。道幅1タイル） ---
   const TILE = 4; // グリッド1マス=4世界単位。全座標はTILE整数倍でグリッド線に吸着させる
   const districts = new Map();
@@ -23,30 +24,113 @@ export function render(city, opts = {}) {
     if (!districts.has(n.district)) districts.set(n.district, []);
     districts.get(n.district).push(n);
   }
-  const names = [...districts.keys()].sort((a, b) =>
-    (districts.get(b).length - districts.get(a).length) || (a < b ? -1 : 1));
+  const bySize = (a, b) => (districts.get(b).length - districts.get(a).length) || (a < b ? -1 : 1);
+
+  // 区画の並び: 前回の順序を保ち、新しい区画だけ後ろに足す。
+  // 件数順で毎回並べ直すと、1ファイル増えただけで区画の順位が入れ替わって街ごと動く。
+  let names;
+  if (prev && prev.districtOrder) {
+    const alive = new Set(districts.keys());
+    const known = new Set(prev.districtOrder);
+    names = prev.districtOrder.filter(n => alive.has(n))
+      .concat([...districts.keys()].filter(n => !known.has(n)).sort(bySize));
+  } else {
+    names = [...districts.keys()].sort(bySize);
+  }
+
   const pos = new Map();
   const plates = []; // { name, ox, oy, cols, rows } すべてタイル単位
   const GAP = 1;
-  const shapeOf = count => {
-    const cols = Math.max(1, Math.ceil(Math.sqrt(count)));
-    return { cols, rows: Math.ceil(count / cols) };
+  const squareCols = count => Math.max(1, Math.ceil(Math.sqrt(count)));
+
+  // 区画の幅: 前回の幅をそのまま使う（縦に伸びるだけなら既存の位置は動かない）。
+  // 極端に細長くなったときだけ引き直す。
+  const prevCols = (prev && prev.districtCols) || {};
+  const colsOf = (name, count) => {
+    const want = squareCols(count);
+    const keep = prevCols[name];
+    if (!keep) return want;
+    const rows = Math.ceil(count / keep);
+    if (rows > keep * 2 || (keep > 2 && keep > rows * 2)) return want; // 縦横比が崩れたら引き直す
+    return keep;
   };
-  const widest = Math.max(...names.map(n => shapeOf(districts.get(n).length).cols));
-  const shelfCols = Math.max(Math.ceil(Math.sqrt(nodes.length)), widest);
-  let ox = 0, oy = 0, rowRows = 0;
-  names.forEach(name => {
+  const colsByName = {};
+  for (const name of names) colsByName[name] = colsOf(name, districts.get(name).length);
+
+  const widest = Math.max(...names.map(n => colsByName[n]));
+  // 棚の幅も引き継ぐ。総ファイル数のsqrtで毎回決めると、増えるたびに折り返しが変わる
+  const shelfCols = Math.max((prev && prev.shelfCols) || Math.ceil(Math.sqrt(nodes.length)), widest);
+
+  // --- 区画内のセル割り当て（区画の位置とは独立に決まる） ---
+  const prevPos = (prev && prev.cells) || {}; // id -> {d, c, r} 区画内のセル
+  const cells = {};
+  const shape = {}; // name -> {cols, rows}
+  for (const name of names) {
+    const cols = colsByName[name];
     const files = districts.get(name).sort((a, b) => (b.fanIn - a.fanIn) || (b.loc - a.loc));
-    const { cols, rows } = shapeOf(files.length);
-    if (ox > 0 && ox + cols > shelfCols) { ox = 0; oy += rowRows + GAP; rowRows = 0; }
-    files.forEach((n, j) => {
-      const c = ox + (j % cols), r = oy + Math.floor(j / cols);
-      pos.set(n.id, { x: c * TILE, z: r * TILE }); // 整数タイル → グリッド境界に吸着
-    });
-    plates.push({ name, ox, oy, cols, rows });
-    ox += cols + GAP;
-    rowRows = Math.max(rowRows, rows);
-  });
+    // 前回と同じ区画にいて、幅の中に収まっているファイルはセルを据え置く
+    const taken = new Set();
+    const placed = new Map(); // id -> {c, r}
+    for (const n of files) {
+      const p = prevPos[n.id];
+      if (!p || p.d !== name || p.c >= cols) continue;
+      const key = p.c + ',' + p.r;
+      if (taken.has(key)) continue; // 念のため（重複は先着優先）
+      taken.add(key); placed.set(n.id, { c: p.c, r: p.r });
+    }
+    // 残り（新規ファイル・区画をまたいで来たファイル）は空きセルへ詰める
+    let scan = 0;
+    for (const n of files) {
+      if (placed.has(n.id)) continue;
+      for (;; scan++) {
+        const c = scan % cols, r = Math.floor(scan / cols);
+        if (taken.has(c + ',' + r)) continue;
+        taken.add(c + ',' + r); placed.set(n.id, { c, r }); scan++;
+        break;
+      }
+    }
+    let rows = 1;
+    for (const n of files) {
+      const cell = placed.get(n.id);
+      cells[n.id] = { d: name, c: cell.c, r: cell.r };
+      rows = Math.max(rows, cell.r + 1);
+    }
+    shape[name] = { cols, rows };
+  }
+
+  // --- 区画の枠（棚詰め）---
+  // 区画には少し縦の余白を付けて枠を確保しておく。枠に収まっているうちは位置を動かさない。
+  // 1区画でも枠からはみ出したときだけ、全体を詰め直す（そこでまた余白を取り直す）。
+  const SLACK = 4; // 枠の高さは4タイル単位。この範囲の増減では街が動かない
+  const prevSlots = (prev && prev.slots) || {};
+  let reuse = names.length > 0;
+  for (const name of names) {
+    const sl = prevSlots[name];
+    if (!sl || sl.cols !== shape[name].cols || shape[name].rows > sl.rowsCap) { reuse = false; break; }
+  }
+  const slots = {};
+  if (reuse) {
+    for (const name of names) slots[name] = { ...prevSlots[name] };
+  } else {
+    let ox = 0, oy = 0, rowH = 0;
+    for (const name of names) {
+      const { cols, rows } = shape[name];
+      const rowsCap = (Math.floor(rows / SLACK) + 1) * SLACK; // 必ず1〜4行ぶんの余白を残す
+      if (ox > 0 && ox + cols > shelfCols) { ox = 0; oy += rowH + GAP; rowH = 0; } // 棚から溢れたら改行
+      slots[name] = { ox, oy, cols, rowsCap };
+      ox += cols + GAP;
+      rowH = Math.max(rowH, rowsCap);
+    }
+  }
+
+  for (const name of names) {
+    const { ox, oy } = slots[name];
+    for (const n of districts.get(name)) {
+      const cell = cells[n.id];
+      pos.set(n.id, { x: (ox + cell.c) * TILE, z: (oy + cell.r) * TILE }); // 整数タイル → グリッド境界に吸着
+    }
+    plates.push({ name, ox, oy, cols: shape[name].cols, rows: shape[name].rows });
+  }
 
   const maxLoc = Math.max(...nodes.map(n => n.loc), 1);
   const maxFan = Math.max(...nodes.map(n => n.fanIn), 1);
@@ -92,6 +176,18 @@ export function render(city, opts = {}) {
         b: { x: b.x, z: b.z, h: heightOf(byId.get(e.to)) },
       };
     }).filter(Boolean);
+
+  return {
+    TILE, NODES: sceneData, EDGES: edges, PLATES: plateData, CALLS, CITY_CX, CITY_CZ,
+    stats: city.stats,
+    // 次回に引き継ぐ配置情報（描画には使わない）
+    districtOrder: names, districtCols: colsByName, shelfCols, cells, slots,
+  };
+}
+
+export function render(city, opts = {}) {
+  const t0 = performance.now();
+  const { TILE, NODES: sceneData, EDGES: edges, PLATES: plateData, CALLS, CITY_CX, CITY_CZ } = opts.layout ?? layout(city, opts.prevLayout ?? null);
 
   const stats = city.stats;
   const kindLegend = Object.entries(KIND_COLORS).map(([k, c]) =>
@@ -155,9 +251,9 @@ header h1{font-size:16px;letter-spacing:.04em}
 </style></head><body>
 <header>
 <h1>⬡ ${esc(city.root)}</h1>
-<span class="stat"><b>${stats.files}</b><span>files</span></span>
-<span class="stat"><b>${stats.loc.toLocaleString()}</b><span>loc</span></span>
-<span class="stat"><b>${stats.edges}</b><span>imports</span></span>
+<span class="stat"><b id="st-files">${stats.files}</b><span>files</span></span>
+<span class="stat"><b id="st-loc">${stats.loc.toLocaleString()}</b><span>loc</span></span>
+<span class="stat"><b id="st-edges">${stats.edges}</b><span>imports</span></span>
 <span class="legend">${kindLegend}</span>
 <span class="meaning">高さ＝使われている数 · 色＝種類</span>
 <button id="mode-flow" class="mbtn">⇢ フローで見る</button>
@@ -180,6 +276,7 @@ const THREE = await import(URL.createObjectURL(threeBlob));
 var NODES=${JSON.stringify(sceneData)};
 var EDGES=${JSON.stringify(edges)};
 var CALLS=${JSON.stringify(CALLS)};
+var PLATES=${JSON.stringify(plateData)};
 var NOTES=${JSON.stringify(opts.annotations ?? {})};
 var TIMELINE=${JSON.stringify(opts.timeline ?? null)};
 var INSIGHTS=${JSON.stringify(opts.insights ?? {})};
@@ -218,25 +315,41 @@ fill.position.set(-60,90,-70);scene.add(fill);
 // 地面プレート（区画）— {x,z}=ブロック中心, w×d=実寸+薄い縁
 const TILE=${TILE};
 const groundMat=new THREE.MeshLambertMaterial({color:0xe6ddc4});
-for(const p of ${JSON.stringify(plateData)}){
-  const geo=new THREE.BoxGeometry(p.w,0.4,p.d);
-  const m=new THREE.Mesh(geo,groundMat);
-  m.position.set(p.x,-0.2,p.z);
-  cityGroup.add(m);
+const plateGroup=new THREE.Group();cityGroup.add(plateGroup);
+var plateSig=null;
+function buildPlates(){
+  const sig=JSON.stringify(PLATES);
+  if(sig===plateSig)return; // 区画の形が同じなら作り直さない
+  plateSig=sig;
+  while(plateGroup.children.length){const c=plateGroup.children[0];plateGroup.remove(c);c.geometry.dispose();}
+  for(const p of PLATES){
+    const geo=new THREE.BoxGeometry(p.w,0.4,p.d);
+    const m=new THREE.Mesh(geo,groundMat);
+    m.position.set(p.x,-0.2,p.z);
+    plateGroup.add(m);
+  }
 }
+buildPlates();
 
 // ベースグリッド（線を建物のタイル境界に正確に合わせる）
-(function buildGrid(){
+const gridGroup=new THREE.Group();cityGroup.add(gridGroup);
+var gridSig=null;
+function buildGrid(){
   var minX=Infinity,maxX=-Infinity,minZ=Infinity,maxZ=-Infinity;
   for(const n of NODES){minX=Math.min(minX,n.x);maxX=Math.max(maxX,n.x);minZ=Math.min(minZ,n.z);maxZ=Math.max(maxZ,n.z);}
   var pad=TILE*4;
   // 建物中心=TILE整数倍 → 境界は±TILE/2。線の始点を境界に置けば全線が境界に乗る
   var x0=minX-TILE/2-pad, z0=minZ-TILE/2-pad;
   var S=Math.max(maxX+TILE/2+pad-x0, maxZ+TILE/2+pad-z0);
+  var sig=x0+','+z0+','+S;
+  if(sig===gridSig)return; // 範囲が同じなら張り直さない
+  gridSig=sig;
+  while(gridGroup.children.length){const c=gridGroup.children[0];gridGroup.remove(c);if(c.geometry)c.geometry.dispose();if(c.material&&c.material.dispose)c.material.dispose();}
   var grid=new THREE.GridHelper(S,Math.round(S/TILE),0xc9bd9c,0xd8cfb4);
   grid.position.set(x0+S/2,-0.02,z0+S/2);
-  cityGroup.add(grid);
-})();
+  gridGroup.add(grid);
+}
+buildGrid();
 
 // ビル（InstancedMeshでなく個別メッシュ: 高さ個別変更とピッキングのため）+ アウトライン
 const boxGeo=new THREE.BoxGeometry(TILE*0.86,1,TILE*0.86);
@@ -245,16 +358,45 @@ const edgeGeo=new THREE.EdgesGeometry(boxGeo);
 const outlineMat=new THREE.LineBasicMaterial({color:0x14120b});
 const meshes={};
 const pickables=[];
-for(const n of NODES){
-  const mat=new THREE.MeshLambertMaterial({color:n.color});
-  const m=new THREE.Mesh(boxGeo,mat);
-  m.position.set(n.x,0,n.z);
-  m.scale.y=n.h;
-  m.userData.node=n;
-  const ol=new THREE.LineSegments(edgeGeo,outlineMat.clone());
-  m.add(ol); // アウトライン: scale.yに追従して伸びる
-  cityGroup.add(m);pickables.push(m);meshes[n.id]=m;
+const buildingGroup=new THREE.Group();cityGroup.add(buildingGroup);
+function buildBuildings(){
+  // 既存ビルは使い回す（materialを作り直すとシェーダ再コンパイルで重い）
+  const seen={};
+  for(const n of NODES){
+    let m=meshes[n.id];
+    if(m){
+      m.position.set(n.x,0,n.z);
+      m.scale.y=n.h;
+      m.visible=true;
+      if(m.material.color.getHex()!==n.color)m.material.color.setHex(n.color);
+      m.material.emissive.setHex(0x000000);
+      m.children[0].material.color.setHex(0x14120b);m.children[0].material.opacity=1;
+      m.userData.node=n; // deps/syms/locが変わっているのでノードは差し替える
+    }else{
+      const mat=new THREE.MeshLambertMaterial({color:n.color});
+      m=new THREE.Mesh(boxGeo,mat);
+      m.position.set(n.x,0,n.z);
+      m.scale.y=n.h;
+      m.userData.node=n;
+      const ol=new THREE.LineSegments(edgeGeo,outlineMat.clone());
+      m.add(ol); // アウトライン: scale.yに追従して伸びる
+      buildingGroup.add(m);meshes[n.id]=m;
+    }
+    seen[n.id]=1;
+  }
+  // 消えたファイルのビルを撤去
+  for(const k in meshes){
+    if(seen[k])continue;
+    const m=meshes[k];
+    buildingGroup.remove(m);
+    m.material.dispose();
+    if(m.children[0])m.children[0].material.dispose(); // アウトラインのmaterialはcloneなので個別に捨てる
+    delete meshes[k];
+  }
+  pickables.length=0;
+  for(const n of NODES)pickables.push(meshes[n.id]);
 }
+buildBuildings();
 // 新築マーカー: 地面に呼吸するリング（錐より静かに「ここ新規」を示す）
 const ringGeo=new THREE.RingGeometry(TILE*0.55,TILE*0.72,40);
 ringGeo.rotateX(-Math.PI/2);
@@ -279,11 +421,18 @@ const stripes=(function(){
 // 高さが変わらなかったエッジは再生成しない（idle時コストほぼゼロ）
 const edgeGroup=new THREE.Group();cityGroup.add(edgeGroup);
 const nodeAt={};
-for(const n of NODES)nodeAt[n.x+','+n.z]=n;
+function indexNodes(){
+  for(const k in nodeAt)delete nodeAt[k];
+  for(const n of NODES)nodeAt[n.x+','+n.z]=n;
+}
+indexNodes();
 const liveEdges=[]; // {m, ra(radius), ha, hb}
 function rebuildEdges(){
-  while(edgeGroup.children.length){const c=edgeGroup.children[0];edgeGroup.remove(c);c.geometry.dispose();c.material.dispose();}
+  // メッシュは使い回し、本数の増減だけを反映する
+  const pool=edgeGroup.children;
+  liveEdges.length=0;
   const maxFan=Math.max(...NODES.map(n=>n.fanIn),1);
+  let i=0;
   for(const e of EDGES){
     const na=nodeAt[e.a.x+','+e.a.z], nb=nodeAt[e.b.x+','+e.b.z];
     if(!na||!nb)continue;
@@ -291,11 +440,21 @@ function rebuildEdges(){
     const radius=0.02+importance*0.05;                   // ヘアライン寄り
     var col=importance>0.45?0x6f6754:0xb3ab92;
     var op=0.2+importance*0.28;                          // 既定0.2、主線でも~0.48
-    const m=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshLambertMaterial({color:col,transparent:true,opacity:op}));
-    m.userData={aM:meshes[na.id],bM:meshes[nb.id],col:col,op:op};
-    edgeGroup.add(m);
-    liveEdges.push({m:m,ra:radius,ha:-1,hb:-1});
+    const key=na.id+'|'+nb.id;
+    let m=pool[i], keep=false;
+    if(m){
+      keep=(m.userData.key===key); // 同じ端点のままなら形状を張り直さない
+      m.material.color.setHex(col);m.material.opacity=op;m.visible=true;
+    }else{
+      m=new THREE.Mesh(new THREE.BufferGeometry(),new THREE.MeshLambertMaterial({color:col,transparent:true,opacity:op}));
+      edgeGroup.add(m);
+    }
+    const prev=keep?m.userData.hh:null;
+    m.userData={aM:meshes[na.id],bM:meshes[nb.id],col:col,op:op,key:key,hh:prev};
+    liveEdges.push({m:m,ra:radius,ha:prev?prev[0]:-1,hb:prev?prev[1]:-1});
+    i++;
   }
+  while(pool.length>i){const c=pool[pool.length-1];edgeGroup.remove(c);c.geometry.dispose();c.material.dispose();}
 }
 rebuildEdges();
 function updateEdgeHeights(){
@@ -306,6 +465,7 @@ function updateEdgeHeights(){
     var ha=Math.round(ma.scale.y*10)/10, hb=Math.round(mb.scale.y*10)/10; // 量子化で再張りを抑制
     if(ha===e.ha&&hb===e.hb)continue;
     e.ha=ha;e.hb=hb;
+    e.m.userData.hh=[ha,hb]; // 次の差分更新で「変わっていない」と判定するため
     e.m.geometry.dispose();
     const curve=new THREE.QuadraticBezierCurve3(
       new THREE.Vector3(ma.position.x,ha,ma.position.z),
@@ -372,6 +532,13 @@ function startWalk(file,fn){
   walk={hops:hops};
   window.__walkState=function(){return {hops:hops.length,active:hops.filter(function(h){return h.t>=0&&h.t<1}).length,done:hops.filter(function(h){return h.t>=1}).length};};
 }
+window.__gl=function(){ // QA用: 実際に使われているレンダラ（ソフトウェア描画だと差分更新も重くなる）
+  try{
+    var g=renderer.getContext();
+    var d=g.getExtension('WEBGL_debug_renderer_info');
+    return d?g.getParameter(d.UNMASKED_RENDERER_WEBGL):g.getParameter(g.RENDERER);
+  }catch(e){return 'unknown';}
+};
 window.__packets=function(){ // QA用: 流動中パケット数
   var v=0;for(var i=0;i<packetGroup.children.length;i++)if(packetGroup.children[i].visible)v++;
   return {visible:v,ambient:ambient.length};
@@ -383,6 +550,8 @@ function stopWalk(){
 // 常時パケット: fan-in上位ワイヤを静かに流す（量は少なく）
 var ambient=[];
 function seedAmbient(){
+  for(const a of ambient){packetGroup.remove(a.m);a.m.geometry.dispose();a.m.material.dispose();}
+  ambient.length=0;
   const byFan=[...NODES].sort((a,b)=>b.fanIn-a.fanIn).slice(0,6); // fan-in上位6ビルに入る線
   let n=0;
   for(const le of liveEdges){
@@ -396,10 +565,95 @@ function seedAmbient(){
 }
 seedAmbient();
 
+// ---- シーン差分更新: 視点・選択を保ったまま街だけ作り直す（VS Code拡張の保存フック用） ----
+function updateHeaderStats(st){
+  var f=document.getElementById('st-files'),l=document.getElementById('st-loc'),e=document.getElementById('st-edges');
+  if(f&&st.files!=null)f.textContent=st.files;
+  if(l&&st.loc!=null)l.textContent=Number(st.loc).toLocaleString();
+  if(e&&st.edges!=null)e.textContent=st.edges;
+}
+window.__applyScene=function(data){
+  if(!data)return null;
+  if(!data.NODES&&!data.patch)return null;
+  var t0=performance.now();
+  var keep=selected?selected.userData.node.id:null;
+  selectNode(null);
+  if(window.__clearTimeMarkers)window.__clearTimeMarkers();
+  if(data.patch){
+    // 差分パッチ: 変わったノードだけ差し替える（消えたものは落とす）
+    if(data.removed&&data.removed.length){
+      var rm={};for(var i=0;i<data.removed.length;i++)rm[data.removed[i]]=1;
+      NODES=NODES.filter(function(n){return !rm[n.id];});
+    }
+    if(data.nodes&&data.nodes.length){
+      var at={};for(var j=0;j<NODES.length;j++)at[NODES[j].id]=j;
+      for(var k=0;k<data.nodes.length;k++){
+        var nn=data.nodes[k];
+        if(at[nn.id]==null){NODES.push(nn);at[nn.id]=NODES.length-1;}
+        else NODES[at[nn.id]]=nn;
+      }
+    }
+    if(data.EDGES)EDGES=data.EDGES;
+    if(data.CALLS)CALLS=data.CALLS;
+    if(data.PLATES)PLATES=data.PLATES;
+  }else{
+    NODES=data.NODES;
+    EDGES=data.EDGES||[];
+    CALLS=data.CALLS||[];
+    if(data.PLATES)PLATES=data.PLATES;
+  }
+  buildPlates();buildGrid();buildBuildings();indexNodes();
+  edgeByKey=null;
+  rebuildEdges();updateEdgeHeights();
+  seedAmbient();
+  if(data.stats)updateHeaderStats(data.stats);
+  if(keep&&meshes[keep])selectNode(keep); // 選択していたビルが残っていれば選び直す
+  return {nodes:NODES.length,edges:liveEdges.length,selected:keep&&meshes[keep]?keep:null,ms:Math.round(performance.now()-t0)};
+};
+
 // ---- カメラ操作（ドラッグ=パン / 右・⌘+Ctrl+ドラッグ=回転）----
 let yaw=Math.PI/4, pitch=Math.PI/5, zoom=1, target=new THREE.Vector3(${CITY_CX},0,${CITY_CZ});
 window.__cam=function(){return {yaw,pitch,zoom,target:{x:target.x,z:target.z}}}; // QA用
 window.__select=function(id){selectNode(id);return window.__sel?window.__sel():{sel:id}}; // QA用
+window.__setCam=function(c){if(!c)return;yaw=c.yaw;pitch=c.pitch;zoom=c.zoom;if(c.target){target.x=c.target.x;target.z=c.target.z;}updateCamera();}; // ホスト(VS Code等)からの視点復元
+function notifyHost(id){if(window.__onSelect)try{window.__onSelect(id)}catch(e){}} // ユーザ操作による選択だけを外へ通知する
+window.__sel=function(){ // QA用: 選択ハイライト状態（タイムライン有無に関わらず生やす）
+  if(!selected)return {sel:null};
+  var hot=0,dim=0;
+  for(var i=0;i<liveEdges.length;i++){
+    var le=liveEdges[i];
+    if(!le.m.visible)continue;
+    var U=le.m.userData;
+    if((U.aM===selected||U.bM===selected)&&le.m.material.color.getHexString()==='d96c47')hot++;
+    else if(le.m.material.opacity<U.op)dim++;
+  }
+  return {sel:selected.userData.node.id,outline:'#'+selected.children[0].material.color.getHexString(),
+    emissive:'#'+selected.material.emissive.getHexString(),hotWires:hot,dimmedWires:dim};
+};
+window.__nodes=function(){ // QA用: 各ビルの材質色・高さ・画面座標（タイムライン有無に関わらず生やす）
+  var out=[];
+  for(var k in meshes){
+    var m=meshes[k];
+    var v=new THREE.Vector3(m.position.x,m.scale.y*0.6,m.position.z).project(camera);
+    var vt=new THREE.Vector3(m.position.x,m.scale.y,m.position.z).project(camera);
+    out.push({id:k,color:'#'+m.material.color.getHexString(),opacity:m.material.opacity,
+      h:+m.scale.y.toFixed(2),
+      sx:Math.round((v.x*0.5+0.5)*innerWidth),sy:Math.round((-v.y*0.5+0.5)*innerHeight),
+      tx:Math.round((vt.x*0.5+0.5)*innerWidth),ty:Math.round((-vt.y*0.5+0.5)*innerHeight)});
+  }
+  return out;
+};
+window.__edges=function(){ // QA用: ワイヤ追従状態
+  var vis=0,bad=0;
+  for(var i=0;i<liveEdges.length;i++){
+    var e=liveEdges[i];
+    if(!e.m.visible)continue;
+    vis++;
+    var A=e.m.userData.aM,B=e.m.userData.bM;
+    if(Math.abs(e.ha-A.scale.y)>0.05||Math.abs(e.hb-B.scale.y)>0.05)bad++;
+  }
+  return {total:liveEdges.length,visible:vis,detached:bad};
+};
 function updateCamera(){
   const d=140; // 正射影なので距離は固定、zoomで拡縮
   camera.position.set(
@@ -411,6 +665,24 @@ function updateCamera(){
   camera.updateProjectionMatrix();
 }
 updateCamera();
+// 街全体が画面に入るズームに合わせる。表示先の幅で見え方が変わるため（サイドバーは細い）
+function fitCity(){
+  scene.updateMatrixWorld(true);
+  var box=new THREE.Box3();
+  for(var i=0;i<NODES.length;i++){var m=meshes[NODES[i].id];if(m&&m.visible)box.expandByObject(m);}
+  if(box.isEmpty())return;
+  target.set((box.min.x+box.max.x)/2,0,(box.min.z+box.max.z)/2);
+  zoom=1;updateCamera();
+  var v=new THREE.Vector3(),mx=0,my=0;
+  for(var k=0;k<8;k++){
+    v.set(k&1?box.max.x:box.min.x,k&2?box.max.y:box.min.y,k&4?box.max.z:box.min.z).project(camera);
+    mx=Math.max(mx,Math.abs(v.x));my=Math.max(my,Math.abs(v.y));
+  }
+  var d=Math.max(mx,my);
+  if(d>0)zoom=0.92/d; // 少し余白を残す
+  updateCamera();
+}
+fitCity(); // 開いた時点で街全体が入るようにする（ホストからBOOT.camが来ればそれで上書きされる）
 const cv=renderer.domElement;
 let drag=null,moved=false;
 cv.addEventListener('pointerdown',function(e){
@@ -479,7 +751,7 @@ cv.addEventListener('wheel',function(e){
     zoomAt(ndc,Math.max(0.35,Math.min(8,zoom*Math.exp(dy*0.0012))));
   }
 },{passive:false});
-cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;zoom=1;target.set(${CITY_CX},0,${CITY_CZ});updateCamera();});
+cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;target.set(${CITY_CX},0,${CITY_CZ});fitCity();});
 
 // リサイズ
 addEventListener('resize',function(){
@@ -565,7 +837,7 @@ cv.addEventListener('pointerup',function(e){
   pointer.y=-(e.clientY/innerHeight)*2+1;
   raycaster.setFromCamera(pointer,camera);
   var hits=raycaster.intersectObjects(pickables,false);
-  if(hits.length)selectNode(hits[0].object.userData.node.id);
+  if(hits.length){var hitId=hits[0].object.userData.node.id;selectNode(hitId);notifyHost(hitId);}
   else {selectNode(null);panel.style.display='none';}
   downPos=null;
 });
@@ -581,7 +853,7 @@ cv.addEventListener('pointermove',function(e){
 // 検索ジャンプ（フォーカス）
 function focusNode(id){
   var m=meshes[id];if(!m)return;
-  selectNode(id);
+  selectNode(id);notifyHost(id);
   target.set(m.position.x,0,m.position.z);
   zoom=Math.max(zoom,2.2);
   updateCamera();
@@ -732,42 +1004,9 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
   }
   function ratioOf(n,loc){return Math.max(loc,1)/Math.max(n.loc,1);}
   window.__applyTimeframe=applyFrame; // QA用
-  window.__sel=function(){ // QA用: 選択ハイライト状態
-    if(!selected)return {sel:null};
-    var hot=0,dim=0;
-    for(var i=0;i<liveEdges.length;i++){
-      var le=liveEdges[i];
-      if(!le.m.visible)continue;
-      var U=le.m.userData;
-      if((U.aM===selected||U.bM===selected)&&le.m.material.color.getHexString()==='d96c47')hot++;
-      else if(le.m.material.opacity<U.op)dim++;
-    }
-    return {sel:selected.userData.node.id,outline:'#'+selected.children[0].material.color.getHexString(),
-      emissive:'#'+selected.material.emissive.getHexString(),hotWires:hot,dimmedWires:dim};
-  };
-  window.__edges=function(){ // QA用: ワイヤ追従状態
-    var vis=0,bad=0;
-    for(var i=0;i<liveEdges.length;i++){
-      var e=liveEdges[i];
-      if(!e.m.visible)continue;
-      vis++;
-      var A=e.m.userData.aM,B=e.m.userData.bM;
-      if(Math.abs(e.ha-A.scale.y)>0.05||Math.abs(e.hb-B.scale.y)>0.05)bad++;
-    }
-    return {total:liveEdges.length,visible:vis,detached:bad};
-  };
-  window.__nodes=function(){ // QA用: 各ビルの材質色・高さ・画面座標
-    var out=[];
-    for(var k in meshes){
-      var m=meshes[k];
-      var v=new THREE.Vector3(m.position.x,m.scale.y*0.6,m.position.z).project(camera);
-      var vt=new THREE.Vector3(m.position.x,m.scale.y,m.position.z).project(camera);
-      out.push({id:k,color:'#'+m.material.color.getHexString(),opacity:m.material.opacity,
-        h:+m.scale.y.toFixed(2),
-        sx:Math.round((v.x*0.5+0.5)*innerWidth),sy:Math.round((-v.y*0.5+0.5)*innerHeight),
-        tx:Math.round((vt.x*0.5+0.5)*innerWidth),ty:Math.round((-vt.y*0.5+0.5)*innerHeight)});
-    }
-    return out;
+  window.__clearTimeMarkers=function(){ // 差分更新でビルを作り直す前に、古いマーカーを捨てる
+    for(const mk of timeMarkers){cityGroup.remove(mk);if(mk.material)mk.material.dispose();}
+    timeMarkers.length=0;
   };
   window.__tlState=function(){return {
     rings:timeMarkers.filter(function(mk){return !mk.material.map}).length,
@@ -802,8 +1041,9 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
 </body></html>`;
 
   void sceneData; void plateData; void edges; void threeSrc;
-  fs.writeFileSync(opts.out ?? 'dist/index.html', html);
-  return { ms: Math.round(performance.now() - t0), bytes: html.length };
+  // opts.out === null ならファイルに書かない（webview等、文字列で受け取りたい場合）
+  if (opts.out !== null) fs.writeFileSync(opts.out ?? 'dist/index.html', html);
+  return { ms: Math.round(performance.now() - t0), bytes: html.length, html };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('render3d.mjs')) {
