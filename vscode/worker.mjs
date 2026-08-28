@@ -4,7 +4,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createSession } from '../src/extract.mjs';
-import { render } from '../src/render3d.mjs';
+import { layout, render } from '../src/render3d.mjs';
 
 let session = null;
 
@@ -25,6 +25,14 @@ process.on('message', (m) => {
     } else if (m.type === 'update') {
       const results = (m.files ?? []).map((f) => session.update(f)).filter(Boolean);
       process.send({ id: m.id, type: 'updated', results });
+    } else if (m.type === 'scene') {
+      // 差分更新: HTMLを作り直さず、レイアウト結果だけwebviewへ送る
+      const t = performance.now();
+      const city = session.city();
+      process.send({
+        id: m.id, type: 'scene', data: layout(city),
+        ms: Math.round(performance.now() - t),
+      });
     } else if (m.type === 'render') {
       const t = performance.now();
       const city = session.city();

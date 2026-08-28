@@ -46,7 +46,6 @@ upd.results[0] && upd.results[0].parseMs < 100
   ? ok('update', `${upd.results[0].id} を ${upd.results[0].parseMs}ms で再解析`)
   : bad('update', JSON.stringify(upd.results));
 await ask('update', { files: [abs] }); // 元に戻した状態を反映
-worker.kill();
 
 // --- 2. webview相当のHTMLを組む（extension.js の wrap と同じ手順） ---
 console.log('== 2. webview HTML ==');
@@ -62,6 +61,7 @@ const bridge = `
     var m = e.data || {};
     if (m.type === 'select' && window.__select) window.__select(m.id);
     else if (m.type === 'requestCam') vs.postMessage({ type:'cam', cam: window.__cam ? window.__cam() : null });
+    else if (m.type === 'scene' && window.__applyScene) vs.postMessage({ type:'scene-applied', result: window.__applyScene(m.data) });
   });
   (function whenReady(n){
     if (window.__select && window.__cam && window.__sel) {
@@ -155,6 +155,64 @@ const camReq = await page.evaluate(() => {
   return new Promise((res) => setTimeout(() => res(window.__posted.slice(n)), 200));
 });
 camReq.some((m) => m.type === 'cam' && m.cam) ? ok('視点要求→応答') : bad('視点要求', JSON.stringify(camReq));
+
+// --- 4. シーン差分更新: HTMLを入れ直さず街だけ組み直す ---
+console.log('== 4. シーン差分更新（__applyScene） ==');
+const before4 = await page.evaluate(() => ({ cam: window.__cam(), sel: window.__sel().sel, nodes: window.__nodes().length }));
+
+// ファイルを1つ足して差分更新 → ビルが1棟増えるはず
+const addedPath = path.join(repo, 'system-map-e2e-added.ts');
+fs.writeFileSync(addedPath, "export function addedByTest() { return 1; }\n");
+let scene;
+try {
+  await ask('update', { files: [addedPath] });
+  scene = await ask('scene');
+} finally { fs.rmSync(addedPath, { force: true }); }
+
+const applied = await page.evaluate((data) => {
+  const n = window.__posted.length;
+  window.postMessage({ type: 'scene', data }, '*');
+  return new Promise((res) => setTimeout(() => res({
+    posted: window.__posted.slice(n),
+    cam: window.__cam(),
+    sel: window.__sel().sel,
+    nodes: window.__nodes().length,
+  }), 500));
+}, scene.data);
+
+const res = (applied.posted.find((m) => m.type === 'scene-applied') || {}).result;
+res && res.nodes === before4.nodes + 1
+  ? ok('差分更新でビルが増える', `${before4.nodes} → ${res.nodes}棟 / ${res.ms}ms（layout ${scene.ms}ms）`)
+  : bad('差分更新', JSON.stringify({ res, before: before4.nodes }));
+
+JSON.stringify(applied.cam) === JSON.stringify(before4.cam)
+  ? ok('視点が動かない', `zoom=${applied.cam.zoom}`)
+  : bad('視点維持', `${JSON.stringify(before4.cam)} → ${JSON.stringify(applied.cam)}`);
+
+applied.sel === before4.sel ? ok('選択が保たれる', String(applied.sel)) : bad('選択維持', `${before4.sel} → ${applied.sel}`);
+
+// 元に戻す（削除の反映も差分更新で通す）
+await ask('update', { files: [addedPath] });
+const back = await ask('scene');
+const restored = await page.evaluate((data) => {
+  const n = window.__posted.length;
+  window.postMessage({ type: 'scene', data }, '*');
+  return new Promise((res) => setTimeout(() => res(window.__posted.slice(n)), 500));
+}, back.data);
+const r2 = (restored.find((m) => m.type === 'scene-applied') || {}).result;
+r2 && r2.nodes === before4.nodes
+  ? ok('削除も反映される', `${res.nodes} → ${r2.nodes}棟`)
+  : bad('削除の反映', JSON.stringify(r2));
+
+// 構造が変わらない保存（同じシーンをもう一度当てる）＝日常のケース
+const again = await page.evaluate((data) => {
+  const t = performance.now();
+  const r = window.__applyScene(data);
+  return { r, wall: Math.round(performance.now() - t) };
+}, back.data);
+again.r ? ok("変化なしの再適用", again.wall + "ms（" + again.r.nodes + "棟）") : bad("再適用", "nullが返った");
+
+worker.kill();
 
 errors.length === 0 ? ok('CSP下でJSエラーなし') : bad('JSエラー', errors.slice(0, 3).join(' / '));
 await page.screenshot({ path: 'dist/vscode-webview.png' });
