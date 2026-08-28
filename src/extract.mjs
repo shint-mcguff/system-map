@@ -24,7 +24,7 @@ function loadPathAliases(root) {
 
 const EXT_ORDER = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 const PY_EXT = '.py';
-const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'venv', '.venv', '__pycache__', '.hermes', 'coverage']);
+const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'venv', '.venv', '__pycache__', '.hermes', 'coverage', 'cdk.out']);
 const EXTS = new Set(EXT_ORDER);
 
 // --- import 抽出：文全体を捉えて名前つきバインディングまで取る ---
@@ -87,21 +87,34 @@ function resolveImport(fromFile, spec, aliases) {
   return null;
 }
 
-function classifyKind(rel) {
-  const p = rel.split(path.sep);
+function classifyKind(rel, syms = []) {
+  const p = rel.split('/');
+  const base = path.basename(rel).replace(/\.\w+$/, '');
+  // 1) ディレクトリ規約（Next.js等のフレームワーク規約）
   if (p.includes('pages') || /route\.(ts|js)$/.test(rel)) return 'api';
   if (/(^|\/)page\.(tsx|jsx)$/.test(rel) || /(^|\/)layout\.(tsx|jsx)$/.test(rel)) return 'page';
   if (p.some(s => s === 'components' || s === 'ui')) return 'component';
-  if (/(^|\/)use[A-Z]/.test(path.basename(rel))) return 'hook';
+  if (/^use[A-Z]/.test(base)) return 'hook';
   if (p.some(s => s === 'lib' || s === 'utils' || s === 'helpers')) return 'lib';
   if (p.some(s => s === 'types')) return 'type';
   if (p.some(s => s === 'hooks')) return 'hook';
-  if (/\.test\.(ts|tsx|js|jsx)$/.test(rel) || p.includes('tests') || p.includes('__tests__')) return 'test';
+  if (/\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs|py)$/.test(rel) || p.some(s => s === 'tests' || s === '__tests__' || s === 'e2e')) return 'test';
+  // 2) ファイル名規約（ディレクトリで分けないフラットなリポジトリ向け）
+  if (/^(test|spec)-/.test(base)) return 'test';
+  if (/^types?$/.test(base) || /[.-]types?$/.test(base) || /^(schema|models?|dto)$/.test(base)) return 'type';
+  if (/(^|[.-])(server|handler|handlers|controller|controllers|router|routes|api|endpoints?)$/.test(base)) return 'api';
+  if (/(^|[.-])(utils?|helpers?|shared|common|constants?)$/.test(base)) return 'lib';
+  // 3) シンボルからの推定（規約が一切無い場合の最後の手がかり）
+  if (syms.some(s => s.k === 'route' || s.k === 'api')) return 'api';
+  if (syms.length && syms.every(s => s.k === 'type')) return 'type';
   return 'module';
 }
 
+// OS共通のID: Windowsでも区切りは '/'（timeline/git側と一致させる）
+const relId = (root, abs) => path.relative(root, abs).split(path.sep).join('/');
+
 function districtOf(rel) {
-  const parts = rel.split(path.sep);
+  const parts = rel.split('/');
   if (parts[0] === 'src') parts.shift();
   if (parts.length <= 1) return '(root)';
   const dirs = parts.slice(0, -1); // ファイル名を除くディレクトリ部分
@@ -266,7 +279,7 @@ export function extract(root) {
   const external = new Map(); // pkg -> count
 
   for (const file of walk(absRoot)) {
-    const rel = path.relative(absRoot, file);
+    const rel = relId(absRoot, file);
     const src = fs.readFileSync(file, 'utf8');
     const imports = [];
     const symEdges = []; // {local, targetId, targetName} — 関数レベルの使用関係
@@ -289,8 +302,8 @@ export function extract(root) {
               if (!name || name === '*') continue;
               const local = rawName.includes(' as ') ? rawName.split(' as ')[1].trim() : name;
               if (reWord(local).test(src)) {
-                symEdges.push({ from: rel, name, to: path.relative(absRoot, resolved) });
-                binds.push({ as: local, file: path.relative(absRoot, resolved), name });
+                symEdges.push({ from: rel, name, to: relId(absRoot, resolved) });
+                binds.push({ as: local, file: relId(absRoot, resolved), name });
               }
             }
           } else {
@@ -304,8 +317,8 @@ export function extract(root) {
             const root = modName.split('.')[0];
             if (resolved && reWord(root).test(src)) {
               imports.push(resolved);
-              symEdges.push({ from: rel, name: modName.split('.')[0], to: path.relative(absRoot, resolved) });
-              binds.push({ as: root, file: path.relative(absRoot, resolved), name: root });
+              symEdges.push({ from: rel, name: modName.split('.')[0], to: relId(absRoot, resolved) });
+              binds.push({ as: root, file: relId(absRoot, resolved), name: root });
             } else if (!resolved) {
               external.set(root, (external.get(root) ?? 0) + 1);
             }
@@ -332,13 +345,13 @@ export function extract(root) {
             if (re.test(after)) usedNames.add(nm.n);
           }
           for (const n of usedNames) {
-            symEdges.push({ from: rel, name: n, to: path.relative(absRoot, resolved) });
-            binds.push({ as: n, file: path.relative(absRoot, resolved), name: n });
+            symEdges.push({ from: rel, name: n, to: relId(absRoot, resolved) });
+            binds.push({ as: n, file: relId(absRoot, resolved), name: n });
           }
           // default importはターゲット側のdefault exportへ（解決は描画側でゆるく）
           if (b.def && src.slice(m.index + m[0].length).match(new RegExp('\\b' + b.def + '\\b'))) {
-            symEdges.push({ from: rel, name: 'default', to: path.relative(absRoot, resolved), as: b.def });
-            binds.push({ as: b.def, file: path.relative(absRoot, resolved), name: 'default' });
+            symEdges.push({ from: rel, name: 'default', to: relId(absRoot, resolved), as: b.def });
+            binds.push({ as: b.def, file: relId(absRoot, resolved), name: 'default' });
           }
         } else {
           const pkg = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
@@ -349,7 +362,7 @@ export function extract(root) {
     }
     nodes.set(file, {
       id: rel,
-      kind: classifyKind(rel),
+      kind: classifyKind(rel, syms),
       district: districtOf(rel),
       loc: src.split('\n').length,
       bytes: src.length,
