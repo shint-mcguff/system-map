@@ -271,130 +271,121 @@ function analyzeCalls(src, syms, binds) {
   return { calls, ext };
 }
 
-export function extract(root) {
-  const t0 = performance.now();
-  const absRoot = path.resolve(root);
-  const aliases = loadPathAliases(absRoot);
-  const nodes = new Map(); // absPath -> node
-  const external = new Map(); // pkg -> count
+// --- 1ファイル分の解析。他ファイルに依存しないので単体で再実行でき、そのままキャッシュ単位になる ---
+function parseFile(absRoot, file, aliases) {
+  const rel = relId(absRoot, file);
+  const src = fs.readFileSync(file, 'utf8');
+  const imports = [];   // relId配列（解決できた intra-repo import のみ）
+  const symEdges = [];  // {from, name, to} — 関数レベルの使用関係
+  const binds = [];     // {as, file, name} — このファイル内のimport束縛（呼び出し解析用）
+  const external = [];  // 外部パッケージ名
+  let m;
+  let syms;
 
-  for (const file of walk(absRoot)) {
-    const rel = relId(absRoot, file);
-    const src = fs.readFileSync(file, 'utf8');
-    const imports = [];
-    const symEdges = []; // {local, targetId, targetName} — 関数レベルの使用関係
-    const binds = []; // {as, file, name} — このファイル内のimport束縛（呼び出し解析用）
-    let m;
-    let syms;
-
-    if (file.endsWith(PY_EXT)) {
-      // ---- Python: import解析 + def/class抽出 ----
-      syms = extractPySymbols(src);
-      PY_IMPORT_RE.lastIndex = 0;
-      while ((m = PY_IMPORT_RE.exec(src))) {
-        if (m[1]) {
-          // from X import a, b
-          const resolved = resolvePyModule(file, m[1], absRoot);
-          if (resolved) {
-            imports.push(resolved);
-            for (const rawName of m[2].split(',')) {
-              const name = rawName.split(' as ')[0].trim();
-              if (!name || name === '*') continue;
-              const local = rawName.includes(' as ') ? rawName.split(' as ')[1].trim() : name;
-              if (reWord(local).test(src)) {
-                symEdges.push({ from: rel, name, to: relId(absRoot, resolved) });
-                binds.push({ as: local, file: relId(absRoot, resolved), name });
-              }
-            }
-          } else {
-            external.set(m[1].split('.')[0], (external.get(m[1].split('.')[0]) ?? 0) + 1);
-          }
-        } else if (m[3]) {
-          // import x, y
-          for (const mod of m[3].split(',')) {
-            const modName = mod.trim().split(' as ')[0];
-            const resolved = resolvePyModule(file, modName, absRoot);
-            const root = modName.split('.')[0];
-            if (resolved && reWord(root).test(src)) {
-              imports.push(resolved);
-              symEdges.push({ from: rel, name: modName.split('.')[0], to: relId(absRoot, resolved) });
-              binds.push({ as: root, file: relId(absRoot, resolved), name: root });
-            } else if (!resolved) {
-              external.set(root, (external.get(root) ?? 0) + 1);
-            }
-          }
-        }
-      }
-    } else {
-      // ---- JS/TS ---
-      IMPORT_STMT_RE.lastIndex = 0;
-      while ((m = IMPORT_STMT_RE.exec(src))) {
-        const clause = m[1] ?? m[5] ?? ''; // import句 / export-from句
-        const spec = m[2] ?? m[3] ?? m[4] ?? m[6] ?? m[7];
-        if (!spec) continue;
-        const resolved = resolveImport(file, spec, aliases);
+  if (file.endsWith(PY_EXT)) {
+    // ---- Python: import解析 + def/class抽出 ----
+    syms = extractPySymbols(src);
+    PY_IMPORT_RE.lastIndex = 0;
+    while ((m = PY_IMPORT_RE.exec(src))) {
+      if (m[1]) {
+        // from X import a, b
+        const resolved = resolvePyModule(file, m[1], absRoot);
         if (resolved) {
-          imports.push(resolved);
-          // 名前つきバインディングからシンボルエッジを組む
-          const b = parseBindings(clause);
-          const usedNames = new Set();
-          for (const nm of b.names) {
-            // その名前が本文中で本当に使われているか（import行以降で1回以上）
-            const re = new RegExp('\\b' + nm.as.replace(/\$/g, '\\$') + '\\b');
-            const after = src.slice(m.index + m[0].length);
-            if (re.test(after)) usedNames.add(nm.n);
-          }
-          for (const n of usedNames) {
-            symEdges.push({ from: rel, name: n, to: relId(absRoot, resolved) });
-            binds.push({ as: n, file: relId(absRoot, resolved), name: n });
-          }
-          // default importはターゲット側のdefault exportへ（解決は描画側でゆるく）
-          if (b.def && src.slice(m.index + m[0].length).match(new RegExp('\\b' + b.def + '\\b'))) {
-            symEdges.push({ from: rel, name: 'default', to: relId(absRoot, resolved), as: b.def });
-            binds.push({ as: b.def, file: relId(absRoot, resolved), name: 'default' });
+          imports.push(relId(absRoot, resolved));
+          for (const rawName of m[2].split(',')) {
+            const name = rawName.split(' as ')[0].trim();
+            if (!name || name === '*') continue;
+            const local = rawName.includes(' as ') ? rawName.split(' as ')[1].trim() : name;
+            if (reWord(local).test(src)) {
+              symEdges.push({ from: rel, name, to: relId(absRoot, resolved) });
+              binds.push({ as: local, file: relId(absRoot, resolved), name });
+            }
           }
         } else {
-          const pkg = spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0];
-          external.set(pkg, (external.get(pkg) ?? 0) + 1);
+          external.push(m[1].split('.')[0]);
+        }
+      } else if (m[3]) {
+        // import x, y
+        for (const mod of m[3].split(',')) {
+          const modName = mod.trim().split(' as ')[0];
+          const resolved = resolvePyModule(file, modName, absRoot);
+          const rootName = modName.split('.')[0];
+          if (resolved && reWord(rootName).test(src)) {
+            imports.push(relId(absRoot, resolved));
+            symEdges.push({ from: rel, name: rootName, to: relId(absRoot, resolved) });
+            binds.push({ as: rootName, file: relId(absRoot, resolved), name: rootName });
+          } else if (!resolved) {
+            external.push(rootName);
+          }
         }
       }
-      syms = extractSymbols(src);
     }
-    nodes.set(file, {
-      id: rel,
-      kind: classifyKind(rel, syms),
-      district: districtOf(rel),
-      loc: src.split('\n').length,
-      bytes: src.length,
-      imports, // absPath配列（後でidに正規化）
-      exports: (src.match(/^export (?:default |const |function |class |async )/gm) || []).length,
-      syms,
-      symEdges,
-      _binds: binds,
-    });
+  } else {
+    // ---- JS/TS ---
+    IMPORT_STMT_RE.lastIndex = 0;
+    while ((m = IMPORT_STMT_RE.exec(src))) {
+      const clause = m[1] ?? m[5] ?? ''; // import句 / export-from句
+      const spec = m[2] ?? m[3] ?? m[4] ?? m[6] ?? m[7];
+      if (!spec) continue;
+      const resolved = resolveImport(file, spec, aliases);
+      if (resolved) {
+        imports.push(relId(absRoot, resolved));
+        // 名前つきバインディングからシンボルエッジを組む
+        const b = parseBindings(clause);
+        const usedNames = new Set();
+        for (const nm of b.names) {
+          // その名前が本文中で本当に使われているか（import行以降で1回以上）
+          const re = new RegExp('\\b' + nm.as.replace(/\$/g, '\\$') + '\\b');
+          const after = src.slice(m.index + m[0].length);
+          if (re.test(after)) usedNames.add(nm.n);
+        }
+        for (const n of usedNames) {
+          symEdges.push({ from: rel, name: n, to: relId(absRoot, resolved) });
+          binds.push({ as: n, file: relId(absRoot, resolved), name: n });
+        }
+        // default importはターゲット側のdefault exportへ（解決は描画側でゆるく）
+        if (b.def && src.slice(m.index + m[0].length).match(new RegExp('\\b' + b.def + '\\b'))) {
+          symEdges.push({ from: rel, name: 'default', to: relId(absRoot, resolved), as: b.def });
+          binds.push({ as: b.def, file: relId(absRoot, resolved), name: 'default' });
+        }
+      } else {
+        external.push(spec.startsWith('@') ? spec.split('/').slice(0, 2).join('/') : spec.split('/')[0]);
+      }
+    }
+    syms = extractSymbols(src);
   }
 
-  // imports を id に正規化 + 存在するノードのみエッジ化
+  const r = analyzeCalls(src, syms ?? [], binds);
+  return {
+    id: rel,
+    kind: classifyKind(rel, syms),
+    district: districtOf(rel),
+    loc: src.split('\n').length,
+    bytes: src.length,
+    exports: (src.match(/^export (?:default |const |function |class |async )/gm) || []).length,
+    syms,
+    imports,
+    symEdges,
+    external,
+    calls: dedupeCalls(r.calls),
+    ext: dedupeExt(r.ext),
+  };
+}
+
+// --- 解析済みレコードの集約。ファイル間の関係（edges/fanIn/呼び出しグラフ）はここで組む ---
+function assemble(absRoot, recs, t0) {
+  const nodes = new Map(); // relId -> node
+  for (const [rel, r] of recs) nodes.set(rel, { ...r, deps: [], fanIn: 0 });
+
+  // imports のうち街に存在するファイルだけをエッジ化
   const edges = [];
   for (const node of nodes.values()) {
-    node.deps = [];
     for (const target of node.imports) {
       const t = nodes.get(target);
       if (t) { node.deps.push(t.id); edges.push({ from: node.id, to: t.id }); }
     }
-    delete node.imports;
-    node.fanIn = 0;
   }
-  const idOf = new Map([...nodes.values()].map(n => [n.id, n]));
-  for (const e of edges) idOf.get(e.to).fanIn++;
-
-  // ファイル内呼び出し解析（シンボル定義済みのノードのみ）
-  for (const node of nodes.values()) {
-    const r = analyzeCalls(fs.readFileSync(path.join(absRoot, node.id), 'utf8'), node.syms ?? [], node._binds ?? []);
-    node.calls = dedupeCalls(r.calls);
-    node.ext = dedupeExt(r.ext);
-    delete node._binds;
-  }
+  for (const e of edges) nodes.get(e.to).fanIn++;
 
   const list = [...nodes.values()].sort((a, b) => a.id.localeCompare(b.id));
 
@@ -423,6 +414,9 @@ export function extract(root) {
   // 上限1000件（超過は切り捨て。呼び出しは既にfan-in上位ビルに偏る）
   const callsFinal = callsDedup.length > 1000 ? callsDedup.slice(0, 1000) : callsDedup;
 
+  const external = new Set();
+  for (const r of recs.values()) for (const p of (r.external ?? [])) external.add(p);
+
   return {
     root: path.basename(absRoot),
     generatedAt: new Date().toISOString(),
@@ -439,6 +433,83 @@ export function extract(root) {
       ({ id, kind, district, loc, bytes, deps, exports: exp, fanIn, syms })),
     edges,
     calls: callsFinal,
+  };
+}
+
+// --- 解析キャッシュ: mtime+sizeが一致するファイルは前回のレコードを使い回す ---
+const CACHE_V = 1;
+
+function loadCache(cachePath, absRoot) {
+  try {
+    const c = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+    if (c.v === CACHE_V && c.root === absRoot) return c;
+  } catch { /* 壊れていたら無視して全量解析 */ }
+  return null;
+}
+
+// opts.cache: true でリポジトリ直下の .system-map-cache.json、文字列でそのパスを使う
+export function extract(root, opts = {}) {
+  const t0 = performance.now();
+  const absRoot = path.resolve(root);
+  const aliases = loadPathAliases(absRoot);
+  const cachePath = opts.cache === true ? path.join(absRoot, '.system-map-cache.json')
+    : (typeof opts.cache === 'string' ? opts.cache : null);
+  const prev = cachePath ? loadCache(cachePath, absRoot) : null;
+  const next = cachePath ? { v: CACHE_V, root: absRoot, files: {} } : null;
+
+  const recs = new Map();
+  let hits = 0, parsed = 0;
+  for (const file of walk(absRoot)) {
+    const rel = relId(absRoot, file);
+    let rec = null, st = null;
+    if (cachePath) {
+      st = fs.statSync(file);
+      const hit = prev?.files[rel];
+      if (hit && hit.m === st.mtimeMs && hit.s === st.size) { rec = hit.r; hits++; }
+    }
+    if (!rec) { rec = parseFile(absRoot, file, aliases); parsed++; }
+    recs.set(rel, rec);
+    if (next) next.files[rel] = { m: st.mtimeMs, s: st.size, r: rec };
+  }
+  if (next) fs.writeFileSync(cachePath, JSON.stringify(next));
+
+  const city = assemble(absRoot, recs, t0);
+  if (cachePath) { city.stats.cacheHits = hits; city.stats.parsed = parsed; }
+  return city;
+}
+
+// --- 差分抽出セッション: 常駐して1ファイル単位で解析を更新する（serve / VS Code拡張用） ---
+export function createSession(root) {
+  const absRoot = path.resolve(root);
+  let aliases = loadPathAliases(absRoot);
+  const recs = new Map();
+  const t0 = performance.now();
+  for (const file of walk(absRoot)) recs.set(relId(absRoot, file), parseFile(absRoot, file, aliases));
+  const initMs = Math.round(performance.now() - t0);
+  const targeted = (abs) => EXTS.has(path.extname(abs)) || abs.endsWith(PY_EXT);
+
+  return {
+    root: absRoot,
+    initMs,
+    size: () => recs.size,
+    has: (rel) => recs.has(rel),
+    // 現時点のレコードから city.json を組み立てる
+    city: () => assemble(absRoot, recs, performance.now()),
+    // 1ファイルだけ再解析する。対象外の拡張子は null、消えていれば removed:true
+    update(file) {
+      const abs = path.resolve(absRoot, file);
+      if (!targeted(abs)) return null;
+      const t = performance.now();
+      const rel = relId(absRoot, abs);
+      if (!fs.existsSync(abs)) {
+        const removed = recs.delete(rel);
+        return { id: rel, removed, parseMs: +(performance.now() - t).toFixed(1) };
+      }
+      recs.set(rel, parseFile(absRoot, abs, aliases));
+      return { id: rel, removed: false, parseMs: +(performance.now() - t).toFixed(1) };
+    },
+    // tsconfig の paths が変わったときに呼ぶ
+    reloadAliases() { aliases = loadPathAliases(absRoot); },
   };
 }
 

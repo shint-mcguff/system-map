@@ -802,8 +802,9 @@ if(TIMELINE&&TIMELINE.frames&&TIMELINE.frames.length){
 </body></html>`;
 
   void sceneData; void plateData; void edges; void threeSrc;
-  fs.writeFileSync(opts.out ?? 'dist/index.html', html);
-  return { ms: Math.round(performance.now() - t0), bytes: html.length };
+  // opts.out === null ならファイルに書かない（webview等、文字列で受け取りたい場合）
+  if (opts.out !== null) fs.writeFileSync(opts.out ?? 'dist/index.html', html);
+  return { ms: Math.round(performance.now() - t0), bytes: html.length, html };
 }
 
 if (process.argv[1] && process.argv[1].endsWith('render3d.mjs')) {
