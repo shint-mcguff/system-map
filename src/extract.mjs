@@ -24,7 +24,7 @@ function loadPathAliases(root) {
 
 const EXT_ORDER = ['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs'];
 const PY_EXT = '.py';
-const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'venv', '.venv', '__pycache__', '.hermes', 'coverage']);
+const SKIP_DIRS = new Set(['node_modules', '.git', '.next', 'dist', 'build', 'venv', '.venv', '__pycache__', '.hermes', 'coverage', 'cdk.out']);
 const EXTS = new Set(EXT_ORDER);
 
 // --- import 抽出：文全体を捉えて名前つきバインディングまで取る ---
@@ -87,16 +87,26 @@ function resolveImport(fromFile, spec, aliases) {
   return null;
 }
 
-function classifyKind(rel) {
+function classifyKind(rel, syms = []) {
   const p = rel.split('/');
+  const base = path.basename(rel).replace(/\.\w+$/, '');
+  // 1) ディレクトリ規約（Next.js等のフレームワーク規約）
   if (p.includes('pages') || /route\.(ts|js)$/.test(rel)) return 'api';
   if (/(^|\/)page\.(tsx|jsx)$/.test(rel) || /(^|\/)layout\.(tsx|jsx)$/.test(rel)) return 'page';
   if (p.some(s => s === 'components' || s === 'ui')) return 'component';
-  if (/(^|\/)use[A-Z]/.test(path.basename(rel))) return 'hook';
+  if (/^use[A-Z]/.test(base)) return 'hook';
   if (p.some(s => s === 'lib' || s === 'utils' || s === 'helpers')) return 'lib';
   if (p.some(s => s === 'types')) return 'type';
   if (p.some(s => s === 'hooks')) return 'hook';
-  if (/\.test\.(ts|tsx|js|jsx)$/.test(rel) || p.includes('tests') || p.includes('__tests__')) return 'test';
+  if (/\.(test|spec)\.(ts|tsx|js|jsx|mjs|cjs|py)$/.test(rel) || p.some(s => s === 'tests' || s === '__tests__' || s === 'e2e')) return 'test';
+  // 2) ファイル名規約（ディレクトリで分けないフラットなリポジトリ向け）
+  if (/^(test|spec)-/.test(base)) return 'test';
+  if (/^types?$/.test(base) || /[.-]types?$/.test(base) || /^(schema|models?|dto)$/.test(base)) return 'type';
+  if (/(^|[.-])(server|handler|handlers|controller|controllers|router|routes|api|endpoints?)$/.test(base)) return 'api';
+  if (/(^|[.-])(utils?|helpers?|shared|common|constants?)$/.test(base)) return 'lib';
+  // 3) シンボルからの推定（規約が一切無い場合の最後の手がかり）
+  if (syms.some(s => s.k === 'route' || s.k === 'api')) return 'api';
+  if (syms.length && syms.every(s => s.k === 'type')) return 'type';
   return 'module';
 }
 
@@ -352,7 +362,7 @@ export function extract(root) {
     }
     nodes.set(file, {
       id: rel,
-      kind: classifyKind(rel),
+      kind: classifyKind(rel, syms),
       district: districtOf(rel),
       loc: src.split('\n').length,
       bytes: src.length,
