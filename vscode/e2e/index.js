@@ -32,13 +32,14 @@ async function run() {
   const api = await ext.activate();
   ok('activate', typeof api.isOpen === 'function' ? 'test API あり' : '');
 
-  // --- 1. 街を開く（worker init → render → webview → ブリッジのready） ---
+  // --- 1. 街を開く（既定はエディタの右列）---
   const t0 = Date.now();
   await vscode.commands.executeCommand('systemMap.open');
-  if (!api.isOpen()) fail('街を開く', 'パネルが作られていない');
+  await waitFor(() => api.isOpen(), 30000, '表示先の生成');
+  if (!api.hostKinds().includes('panel')) fail('既定の表示先', `エディタ列ではない: ${JSON.stringify(api.hostKinds())}`);
   const readyMs = await waitFor(() => api.isReady(), 90000, 'webviewのready');
   const p = api.lastPaint();
-  ok('街を開く', `${p.files} files / ${p.edges} edges, render ${p.renderMs}ms, ready まで ${Date.now() - t0}ms(内 webview ${readyMs}ms) / GL: ${api.glInfo()}`);
+  ok('エディタ右列で街を開く', `${p.files} files / ${p.edges} edges, render ${p.renderMs}ms, ready まで ${Date.now() - t0}ms(内 webview ${readyMs}ms) / GL: ${api.glInfo()}`);
 
   // --- 2. エディタ切替 → ビル選択が追従する ---
   const files = (await vscode.workspace.findFiles('**/*.ts', null, 5)).map((u) => u.fsPath);
@@ -64,9 +65,11 @@ async function run() {
   async function touchAndSave(label) {
     const n = api.updateCount();
     const t = Date.now();
-    const ed = await vscode.window.showTextDocument(docB);
-    await ed.edit((b) => b.insert(new vscode.Position(0, 0), `// e2e ${label}\n`));
-    if (!(await docB.save())) fail(label, 'save()がfalseを返した');
+    // ドキュメントは毎回開き直す（前の手順で閉じている場合があるため）
+    const doc = await vscode.workspace.openTextDocument(target);
+    const ed = await vscode.window.showTextDocument(doc);
+    if (!(await ed.edit((b) => b.insert(new vscode.Position(0, 0), `// e2e ${label}\n`)))) fail(label, 'edit()が通らなかった');
+    if (!(await doc.save())) fail(label, 'save()がfalseを返した');
     await waitFor(() => api.updateCount() > n, 30000, label);
     const p = api.lastPaint(), a = api.lastApply();
     if (p.reason !== 'save') fail('更新の理由', JSON.stringify(p));
@@ -74,22 +77,37 @@ async function run() {
     ok(label, `${Date.now() - t}ms（layout ${p.renderMs}ms / 送受 ${p.roundTripMs}ms(${Math.round(p.bytes / 1024)}KB, 往路 ${a.recvMs}ms) / 組み直し ${a.ms}ms、${a.nodes}棟）`);
   }
 
+  // ファイルを触る手順はまとめて済ませ、ディスクの復元は最後に1回だけ。
+  // （途中でディスクだけ戻すとVS Codeの持っている内容と食い違い、次のsave()が拒否される）
   try {
     await touchAndSave('保存→街の更新');
     await touchAndSave('2回目の保存');   // 1回目の往復が暖機ぶんだけ遅い可能性の切り分け
+
+    // 選択が更新後も保たれている
+    if (api.lastSelect() !== relOf(files[1])) fail('更新後の選択維持', String(api.lastSelect()));
+    ok('更新後も選択を維持', api.lastSelect());
+
+    // --- 4. コマンド: このファイルのビルへ ---
+    await vscode.commands.executeCommand('systemMap.reveal');
+    ok('systemMap.reveal', '例外なし');
+
+    // --- 5. アクティビティバーのビューでも開く（同じ街を両方に映す） ---
+    await vscode.commands.executeCommand('systemMap.openInSidebar');
+    await waitFor(() => api.hostKinds().includes('view'), 60000, 'サイドバーのビュー');
+    ok('サイドバーでも開く', `表示先: ${api.hostKinds().join(' + ')}`);
+
+    // 両方が映っている状態で保存 → どちらも差分更新される
+    await touchAndSave('2画面のまま保存→更新');
   } finally {
     // エディタの変更を捨ててからディスクを戻す
     await vscode.commands.executeCommand('workbench.action.revertAndCloseActiveEditor').then(undefined, () => {});
     fs.writeFileSync(target, before);
   }
 
-  // 選択が更新後も保たれている
-  if (api.lastSelect() !== relOf(files[1])) fail('更新後の選択維持', String(api.lastSelect()));
-  ok('更新後も選択を維持', api.lastSelect());
-
-  // --- 4. コマンド: このファイルのビルへ ---
-  await vscode.commands.executeCommand('systemMap.reveal');
-  ok('systemMap.reveal', '例外なし');
+  // --- 6. 解析しなおす ---
+  await vscode.commands.executeCommand('systemMap.reindex');
+  await waitFor(() => api.isReady(), 60000, 'reindex後のready');
+  ok('systemMap.reindex', `${api.lastPaint().files} files`);
 
   say('');
   flush('ALL PASS');

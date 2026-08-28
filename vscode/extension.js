@@ -1,23 +1,26 @@
-// extension.js — system-map を VS Code の横に並べる。
+// extension.js — system-map を VS Code の中に置く。
 // 生成物が単一自己完結HTMLなので webview にそのまま載せ、選択とファイルを双方向に繋ぐ。
+// 表示先は複数持てる（アクティビティバーのビュー / エディタ列のパネル）。同じ街を両方に映す。
 const vscode = require('vscode');
 const path = require('path');
 const cp = require('child_process');
 
-let panel = null;      // WebviewPanel
-let worker = null;     // 解析＋描画の子プロセス
-let root = null;       // ワークスペースの絶対パス
-let lastCam = null;    // 再描画をまたいで視点を保つ
+const hosts = new Set();  // 街を映している webview たち { kind, webview, ready }
+let worker = null;        // 解析＋描画の子プロセス
+let root = null;          // ワークスペースの絶対パス
+let indexed = false;      // workerのinitが済んでいるか
+let booting = null;       // 起動処理の進行中プロミス（同時に2つ走らせない）
+let panel = null;         // エディタ列のWebviewPanel（あれば）
+let lastCam = null;       // 再描画をまたいで視点を保つ
 let lastSelect = null;
-let ready = false;
 let rebuildTimer = null;
 const pending = new Set();
-let echoGuard = false; // 自分が開いたエディタを選択として跳ね返さない
-let updateCount = 0;   // 保存起点の更新回数（拡張テスト用）
-let lastPaint = null;  // 直近の描画結果（拡張テスト用）
-let lastApply = null;  // 直近のシーン差分更新の結果（拡張テスト用）
-let lastScene = null;  // 直近にwebviewへ渡したシーン（次回の差分計算用）
-let glInfo = null;     // webviewのWebGLレンダラ名（拡張テスト用）
+let echoGuard = false;    // 自分が開いたエディタを選択として跳ね返さない
+let updateCount = 0;      // 保存起点の更新回数（拡張テスト用）
+let lastPaint = null;     // 直近の描画結果（拡張テスト用）
+let lastApply = null;     // 直近のシーン差分更新の結果（拡張テスト用）
+let lastScene = null;     // 直近にwebviewへ渡したシーン（次回の差分計算用）
+let glInfo = null;        // webviewのWebGLレンダラ名（拡張テスト用）
 
 const cfg = () => vscode.workspace.getConfiguration('systemMap');
 const relOf = (fsPath) => path.relative(root, fsPath).split(path.sep).join('/');
@@ -28,18 +31,23 @@ let seq = 0;
 const waiting = new Map();
 
 function startWorker() {
-  worker = cp.fork(path.join(__dirname, 'worker.mjs'), [], {
+  const child = cp.fork(path.join(__dirname, 'worker.mjs'), [], {
     env: { ...process.env, ELECTRON_RUN_AS_NODE: '1' },
     execArgv: [],
     silent: false,
   });
-  worker.on('message', (m) => {
+  worker = child;
+  child.on('message', (m) => {
     const resolve = waiting.get(m.id);
     if (!resolve) return;
     waiting.delete(m.id);
     resolve(m);
   });
-  worker.on('exit', (code) => { out.appendLine(`worker exited (${code})`); worker = null; });
+  // 解析しなおしで入れ替えたとき、古い子の終了で新しい子の参照を消さないようにする
+  child.on('exit', (code) => {
+    out.appendLine(`worker exited (${code})`);
+    if (worker === child) { worker = null; indexed = false; }
+  });
 }
 
 function ask(type, payload = {}) {
@@ -94,27 +102,65 @@ function wrap(html, boot) {
     .replace('</body>', `${bridge}</body>`);
 }
 
-// --- 現在の視点を webview から取り出す（応答が無ければ前回値で続行） ---
-function grabCam() {
-  if (!panel) return Promise.resolve(lastCam);
-  return new Promise((resolve) => {
-    const timer = setTimeout(() => { sub.dispose(); resolve(lastCam); }, 300);
-    const sub = panel.webview.onDidReceiveMessage((m) => {
-      if (m.type !== 'cam') return;
-      clearTimeout(timer); sub.dispose();
-      if (m.cam) lastCam = m.cam;
-      resolve(lastCam);
-    });
-    panel.webview.postMessage({ type: 'requestCam' });
+// --- 表示先（ホスト）の出し入れ ---
+function attachHost(h) {
+  hosts.add(h);
+  h.webview.onDidReceiveMessage(async (m) => {
+    if (m.type === 'ready') { h.ready = true; glInfo = m.gl ?? glInfo; return; }
+    if (m.type === 'error') { out.appendLine(`[webview] ${m.message}`); return; }
+    if (m.type !== 'select' || !m.id) return;
+    lastSelect = m.id;
+    broadcast({ type: 'select', id: m.id }, h); // もう一方の表示先にも選択を伝える
+    if (!cfg().get('openFileOnClick')) return;
+    try {
+      const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(root, m.id)));
+      echoGuard = true;
+      await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true });
+      setTimeout(() => { echoGuard = false; }, 300);
+    } catch { /* 消えたファイルなど */ }
   });
 }
 
-async function paint(reason) {
-  if (!panel) return;
+function broadcast(msg, except = null) {
+  for (const h of hosts) if (h !== except) h.webview.postMessage(msg);
+}
+
+function anyReady() {
+  for (const h of hosts) if (h.ready) return true;
+  return false;
+}
+
+// 応答を1回だけ待つ。応答が無ければ null
+function once(h, type, ms) {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => { sub.dispose(); resolve(null); }, ms);
+    const sub = h.webview.onDidReceiveMessage((m) => {
+      if (m.type !== type) return;
+      clearTimeout(timer); sub.dispose(); resolve(m);
+    });
+  });
+}
+
+// --- 現在の視点を webview から取り出す（応答が無ければ前回値で続行） ---
+async function grabCam() {
+  const h = [...hosts].find((x) => x.ready) ?? [...hosts][0];
+  if (!h) return lastCam;
+  const p = once(h, 'cam', 300);
+  h.webview.postMessage({ type: 'requestCam' });
+  const m = await p;
+  if (m && m.cam) lastCam = m.cam;
+  return lastCam;
+}
+
+// HTMLごと作り直す。開いた直後と、差分更新が使えないときだけ通る
+async function paint(reason, only = null) {
+  const targets = only ? [only] : [...hosts];
+  if (!targets.length) return;
   const t0 = Date.now();
-  const cam = await grabCam();
+  const cam = only ? lastCam : await grabCam();
   const r = await ask('render');
-  panel.webview.html = wrap(r.html, { cam, select: lastSelect });
+  const html = wrap(r.html, { cam, select: lastSelect });
+  for (const h of targets) { h.ready = false; h.webview.html = html; }
   lastPaint = { reason, files: r.stats.files, edges: r.stats.edges, renderMs: r.ms, totalMs: Date.now() - t0 };
   out.appendLine(`[${reason}] ${r.stats.files} files / ${r.stats.edges} edges — render ${r.ms}ms, 合計 ${Date.now() - t0}ms`);
 }
@@ -142,41 +188,44 @@ function scenePayload(next) {
 
 // 保存時: HTMLを作り直さず、シーンデータだけ送って街を組み直す（視点と選択は維持される）
 async function applyScene(reason) {
-  if (!panel) return;
+  if (!hosts.size) return;
   const t0 = Date.now();
   const r = await ask('scene');
-  const applied = new Promise((resolve) => {
-    const timer = setTimeout(() => { sub.dispose(); resolve(null); }, 10000);
-    const sub = panel.webview.onDidReceiveMessage((m) => {
-      if (m.type !== 'scene-applied') return;
-      clearTimeout(timer); sub.dispose(); resolve(m.unsupported ? 'unsupported' : m.result);
-    });
-  });
   const payload = scenePayload(r.data);
   lastScene = r.data;
+  const targets = [...hosts];
+  const replies = targets.map((h) => once(h, 'scene-applied', 10000));
   const tPost = Date.now();
   const bytes = JSON.stringify(payload).length;
-  panel.webview.postMessage({ type: 'scene', data: payload, t0: Date.now() });
-  const res = await applied;
-  if (res === 'unsupported' || res === null) {
+  for (const h of targets) h.webview.postMessage({ type: 'scene', data: payload, t0: Date.now() });
+  // 最初に描き終えた表示先で先に進む。隠れている側が遅くても引きずられない
+  const applied = await new Promise((resolve) => {
+    let left = replies.length, done = false;
+    for (const pr of replies) {
+      pr.then((m) => {
+        if (m && m.result && !m.unsupported && !done) { done = true; resolve(m); }
+        if (--left === 0 && !done) resolve(null);
+      });
+    }
+  });
+  if (!applied) {
     // 差分更新できないページ（古いwebviewの復元など）はHTMLごと入れ直す
-    out.appendLine('[' + reason + '] シーン差分更新が使えないためHTMLを作り直します');
+    out.appendLine(`[${reason}] シーン差分更新が使えないためHTMLを作り直します`);
     lastScene = null;
     await paint(reason);
     return;
   }
-  lastApply = res;
-  const roundTripMs = Date.now() - tPost;
+  lastApply = applied.result;
   lastPaint = {
     reason, files: r.data.stats.files, edges: r.data.stats.edges,
-    renderMs: r.ms, applyMs: lastApply ? lastApply.ms : null,
-    roundTripMs, bytes, totalMs: Date.now() - t0,
+    renderMs: r.ms, applyMs: lastApply.ms,
+    roundTripMs: Date.now() - tPost, bytes, totalMs: Date.now() - t0,
   };
-  out.appendLine(`[${reason}] ${r.data.stats.files} files / ${r.data.stats.edges} edges — layout ${r.ms}ms + 描画 ${lastApply ? lastApply.ms : '?'}ms, 合計 ${Date.now() - t0}ms`);
+  out.appendLine(`[${reason}] ${r.data.stats.files} files / ${r.data.stats.edges} edges — layout ${r.ms}ms + 描画 ${lastApply.ms}ms, 合計 ${Date.now() - t0}ms`);
 }
 
 function scheduleUpdate(fsPath) {
-  if (!panel || !cfg().get('updateOnSave')) return;
+  if (!hosts.size || !cfg().get('updateOnSave')) return;
   pending.add(fsPath);
   clearTimeout(rebuildTimer);
   rebuildTimer = setTimeout(async () => {
@@ -194,57 +243,91 @@ function scheduleUpdate(fsPath) {
   }, 200);
 }
 
-async function openCity(context) {
+// --- 解析の起動。表示先がいくつあっても1回だけ ---
+function ensureIndexed(force = false) {
+  if (indexed && !force) return Promise.resolve();
+  if (booting) return booting;
   const folder = vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders[0];
-  if (!folder) { vscode.window.showErrorMessage('System Map: ワークスペースを開いてから実行してください'); return; }
+  if (!folder) {
+    vscode.window.showErrorMessage('System Map: ワークスペースを開いてから実行してください');
+    return Promise.resolve();
+  }
   root = folder.uri.fsPath;
+  booting = vscode.window.withProgress(
+    { location: vscode.ProgressLocation.Window, title: 'System Map: コードベースを解析中…' },
+    async () => {
+      if (force && worker) { worker.kill(); worker = null; }
+      if (!worker) startWorker();
+      const r = await ask('init', { root });
+      out.appendLine(`indexed ${r.files} files in ${r.ms}ms`);
+      indexed = true;
+      lastScene = null;
+      const ed = vscode.window.activeTextEditor;
+      if (ed && ed.document.uri.scheme === 'file' && !relOf(ed.document.uri.fsPath).startsWith('..')) {
+        lastSelect = relOf(ed.document.uri.fsPath);
+      }
+    },
+  ).finally(() => { booting = null; });
+  return booting;
+}
 
+async function showIn(h) {
+  await ensureIndexed();
+  if (!indexed) return;
+  await paint('open', h);
+  // 初回HTMLに埋まっているシーンを差分計算の基準にしておく
+  if (!lastScene) ask('scene').then((s) => { lastScene = s.data; }).catch(() => {});
+}
+
+// --- アクティビティバーのビュー（サイドバー。ユーザが右サイドバーや下パネルへ動かせる） ---
+class CityViewProvider {
+  resolveWebviewView(view) {
+    view.webview.options = { enableScripts: true };
+    const h = { kind: 'view', webview: view.webview, ready: false };
+    attachHost(h);
+    view.onDidDispose(() => hosts.delete(h));
+    showIn(h);
+  }
+}
+
+// --- エディタ列のパネル（大きく見たいとき） ---
+async function openInEditor() {
   if (panel) { panel.reveal(vscode.ViewColumn.Beside); return; }
   panel = vscode.window.createWebviewPanel('systemMap', 'System Map', vscode.ViewColumn.Beside, {
     enableScripts: true,
     retainContextWhenHidden: true,
   });
-  panel.onDidDispose(() => {
-    panel = null; ready = false;
-    if (worker) { worker.kill(); worker = null; }
-  }, null, context.subscriptions);
-
-  panel.webview.onDidReceiveMessage(async (m) => {
-    if (m.type === 'ready') { ready = true; glInfo = m.gl; return; }
-    if (m.type !== 'select' || !m.id) return;
-    lastSelect = m.id;
-    if (!cfg().get('openFileOnClick')) return;
-    try {
-      const doc = await vscode.workspace.openTextDocument(vscode.Uri.file(path.join(root, m.id)));
-      echoGuard = true;
-      await vscode.window.showTextDocument(doc, { viewColumn: vscode.ViewColumn.One, preserveFocus: true });
-      setTimeout(() => { echoGuard = false; }, 300);
-    } catch { /* 消えたファイルなど */ }
-  }, null, context.subscriptions);
-
-  await vscode.window.withProgress(
-    { location: vscode.ProgressLocation.Notification, title: 'System Map: コードベースを解析中…' },
-    async () => {
-      startWorker();
-      const r = await ask('init', { root });
-      out.appendLine(`indexed ${r.files} files in ${r.ms}ms`);
-      lastScene = null;
-      const ed = vscode.window.activeTextEditor;
-      if (ed && ed.document.uri.scheme === 'file') lastSelect = relOf(ed.document.uri.fsPath);
-      await paint('open');
-      // 初回HTMLに埋まっているシーンを差分計算の基準にしておく
-      ask('scene').then((s) => { lastScene = s.data; }).catch(() => {});
-    },
-  );
+  const h = { kind: 'panel', webview: panel.webview, ready: false };
+  attachHost(h);
+  panel.onDidDispose(() => { hosts.delete(h); panel = null; });
+  await showIn(h);
 }
 
 function activate(context) {
   context.subscriptions.push(
-    vscode.commands.registerCommand('systemMap.open', () => openCity(context)),
+    vscode.window.registerWebviewViewProvider('systemMap.city', new CityViewProvider(), {
+      webviewOptions: { retainContextWhenHidden: true },
+    }),
+    // 既定はエディタの右列。3D都市は横幅が要るので、細いサイドバーより広く見えるほうを既定にする
+    vscode.commands.registerCommand('systemMap.open', () => (
+      cfg().get('openLocation') === 'sidebar'
+        ? vscode.commands.executeCommand('systemMap.city.focus')
+        : openInEditor())),
+    vscode.commands.registerCommand('systemMap.openInSidebar', () =>
+      vscode.commands.executeCommand('systemMap.city.focus')),
+    vscode.commands.registerCommand('systemMap.openInEditor', openInEditor),
     vscode.commands.registerCommand('systemMap.reveal', () => {
       const ed = vscode.window.activeTextEditor;
-      if (!panel || !ed) return;
-      panel.webview.postMessage({ type: 'select', id: relOf(ed.document.uri.fsPath) });
+      if (!hosts.size || !ed || !root) return;
+      const rel = relOf(ed.document.uri.fsPath);
+      if (rel.startsWith('..')) return;
+      lastSelect = rel;
+      broadcast({ type: 'select', id: rel });
+    }),
+    vscode.commands.registerCommand('systemMap.reindex', async () => {
+      if (!hosts.size) return vscode.commands.executeCommand('systemMap.city.focus');
+      await ensureIndexed(true); // tsconfigのpaths変更やエディタ外での増減を拾い直す
+      await paint('reindex');
     }),
     vscode.workspace.onDidSaveTextDocument((doc) => {
       if (doc.uri.scheme === 'file' && root && !path.relative(root, doc.uri.fsPath).startsWith('..')) {
@@ -252,20 +335,21 @@ function activate(context) {
       }
     }),
     vscode.window.onDidChangeActiveTextEditor((ed) => {
-      if (!panel || !ready || !ed || echoGuard) return;
+      if (!hosts.size || !anyReady() || !ed || echoGuard) return;
       if (!cfg().get('followActiveEditor') || ed.document.uri.scheme !== 'file' || !root) return;
       const rel = relOf(ed.document.uri.fsPath);
       if (rel.startsWith('..')) return;
       lastSelect = rel;
-      panel.webview.postMessage({ type: 'select', id: rel });
+      broadcast({ type: 'select', id: rel });
     }),
     out,
   );
 
   // 拡張テスト（vscode/e2e）から状態を見るための最小API
   return {
-    isOpen: () => !!panel,
-    isReady: () => ready,
+    isOpen: () => hosts.size > 0,
+    isReady: () => anyReady(),
+    hostKinds: () => [...hosts].map((h) => h.kind),
     updateCount: () => updateCount,
     lastSelect: () => lastSelect,
     lastPaint: () => lastPaint,

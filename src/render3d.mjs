@@ -665,6 +665,24 @@ function updateCamera(){
   camera.updateProjectionMatrix();
 }
 updateCamera();
+// 街全体が画面に入るズームに合わせる。表示先の幅で見え方が変わるため（サイドバーは細い）
+function fitCity(){
+  scene.updateMatrixWorld(true);
+  var box=new THREE.Box3();
+  for(var i=0;i<NODES.length;i++){var m=meshes[NODES[i].id];if(m&&m.visible)box.expandByObject(m);}
+  if(box.isEmpty())return;
+  target.set((box.min.x+box.max.x)/2,0,(box.min.z+box.max.z)/2);
+  zoom=1;updateCamera();
+  var v=new THREE.Vector3(),mx=0,my=0;
+  for(var k=0;k<8;k++){
+    v.set(k&1?box.max.x:box.min.x,k&2?box.max.y:box.min.y,k&4?box.max.z:box.min.z).project(camera);
+    mx=Math.max(mx,Math.abs(v.x));my=Math.max(my,Math.abs(v.y));
+  }
+  var d=Math.max(mx,my);
+  if(d>0)zoom=0.92/d; // 少し余白を残す
+  updateCamera();
+}
+fitCity(); // 開いた時点で街全体が入るようにする（ホストからBOOT.camが来ればそれで上書きされる）
 const cv=renderer.domElement;
 let drag=null,moved=false;
 cv.addEventListener('pointerdown',function(e){
@@ -733,7 +751,7 @@ cv.addEventListener('wheel',function(e){
     zoomAt(ndc,Math.max(0.35,Math.min(8,zoom*Math.exp(dy*0.0012))));
   }
 },{passive:false});
-cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;zoom=1;target.set(${CITY_CX},0,${CITY_CZ});updateCamera();});
+cv.addEventListener('dblclick',function(){yaw=Math.PI/4;pitch=Math.PI/5;target.set(${CITY_CX},0,${CITY_CZ});fitCity();});
 
 // リサイズ
 addEventListener('resize',function(){
